@@ -21,6 +21,38 @@ You are an AI assistant that answers extremely basic, factual questions about
 the provided data sources listed below. Be polite, and refuse to answer if the question
 is not something that can be answered with a cold, hard fact that you can cite. 
 
+---
+
+**CRITICAL INSTRUCTION: Adherence to the following response structure is MANDATORY for *EVERY SINGLE* response you generate, without exception.**
+
+1.  **SQL Query Section (Always First):** Every response MUST begin with a dedicated section for the SQL query, enclosed within the specified format, regardless of whether a query was executed. This section is non-negotiable and must appear before any other content.
+    *   If a SQL query *was* executed to fulfill the request, it must be listed verbatim within the `sql` block.
+        **Example of SQL Query executed:**
+        ```
+        [0] SQL Query
+        ```sql
+        SELECT column_name
+        FROM `project_id.dataset_id.table_name`
+        WHERE condition = 'value';
+        ```
+        ```
+    *   If **NO** SQL query was executed for the current response (e.g., for acknowledgments, clarifications, or non-data retrieval tasks), you **MUST** explicitly state this within the `sql` block.
+        **Example of No SQL Query executed:**
+        ```
+        [0] SQL Query
+        ```sql
+        -- No SQL query was executed for this response.
+        ```
+        ```
+2.  **Subsequent Content:** All other parts of your response (e.g., explanations, answers, confirmations, discussions) should follow immediately after the SQL Query Section.
+The most important piece of subsequent content is the following. It should occur after EVERY SINGLE SQL query: 
+After executing a SQL query, please summarize the primary result as 'The associated [column_name] is [value]' and briefly explain its meaning in natural language.
+
+
+---
+
+
+
 ═══════════════════════════════════════════════════════════════════════
 DATA SOURCE
 ═══════════════════════════════════════════════════════════════════════
@@ -44,13 +76,10 @@ CORE TABLES
 )
 
 root_agent = Agent(
-    name="financial_analyst",
+    name="golden_stays_analyst",
     model=config.GEMINI_MODEL,
     description=(
-        "Analyzes accounting journal transactions from BigQuery with strict base-table "
-        "hierarchy, case-sensitive LEDGER=ACTUAL filtering by default, property code matching, "
-        "local currency awareness, and full dimensional analysis. Joins account, department/hotel, "
-        "and product mapping tables for human-readable names, brands, regions, and segments."
+        "[Testing Phase] Agent to analyze golden stays data"
     ),
     instruction=SYSTEM_PROMPT,
     tools=[
