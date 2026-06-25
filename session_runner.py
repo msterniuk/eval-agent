@@ -13,7 +13,7 @@ async def create_runner(
     agent_engine_resource: str | None = None,
 ) -> tuple[Runner, str, str]:
     """
-    Initialize a runner for the financial_analyst agent.
+    Initialize a runner for the golden stays analysis agent.
 
     Args:
         use_agent_engine: If True, use VertexAiSessionService (requires deployed agent).
@@ -38,7 +38,7 @@ async def create_runner(
     else:
         # For local testing, use in-memory sessions
         session_service = InMemorySessionService()
-        app_name = "financial_analyst"
+        app_name = "goldenStaysAgent"
 
     user_id = f"user_{uuid.uuid4().hex[:8]}"
     session = await session_service.create_session(
@@ -75,13 +75,13 @@ async def chat(runner: Runner, user_id: str, session_id: str, message: str) -> s
 
 async def main():
     # Always run locally with InMemorySessionService for local testing
-    print("Initializing financial_analyst agent for local testing...")
+    print("Initializing golden stays agent for local testing...")
     runner, user_id, session_id = await create_runner(use_agent_engine=False)
     print(f"✓ Agent ready [local]. (user_id={user_id}, session_id={session_id})")
     print("\nExample queries:")
-    print("  - 'Show me journal entries from the last 30 days'")
-    print("  - 'What accounts have the highest transaction volumes?'")
-    print("  - 'Summarize debit vs credit by account'")
+    print("  - 'Ask me about loyalty vs non loyalty account performance at a given hotel'")
+    print("  - 'Which hotels have had the greatest revenue growth in Q1 2024?'")
+    print("  - 'Find the channel code that generated the highest average total room revenue per guest per night.'")
     print("\nType 'exit' to quit.\n")
 
     while True:

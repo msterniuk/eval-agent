@@ -6,7 +6,7 @@ import vertexai
 from vertexai.preview import reasoning_engines
 
 # Initialize
-PROJECT_ID = "ca-sbox-es-science-444"
+PROJECT_ID = "ca-app-shared-prd-444"
 LOCATION = "us-central1"
 
 vertexai.init(project=PROJECT_ID, location=LOCATION)
