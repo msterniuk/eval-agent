@@ -1,4 +1,17 @@
 # session_runner.py — Test the agent locally or with Agent Engine
+
+#filtering out some annoying warnings, comment this out for testing
+
+import warnings
+import logging
+
+warnings.simplefilter("ignore")
+logging.basicConfig(level=logging.ERROR)
+logging.getLogger().setLevel(logging.ERROR)
+logging.getLogger("google").setLevel(logging.ERROR)
+
+
+
 import asyncio
 import uuid
 from google.adk.runners import Runner
@@ -79,8 +92,8 @@ async def main():
     runner, user_id, session_id = await create_runner(use_agent_engine=False)
     print(f"✓ Agent ready [local]. (user_id={user_id}, session_id={session_id})")
     print("\nExample queries:")
-    print("  - 'Ask me about loyalty vs non loyalty account performance at a given hotel'")
-    print("  - 'Which hotels have had the greatest revenue growth in Q1 2024?'")
+    print("  - 'Find all the stays associated with a given Booking Conference Number.'")
+    print("  - 'Give me 5 examples of hotels that have X IATA Number and use the GBP currency.'")
     print("  - 'Find the channel code that generated the highest average total room revenue per guest per night.'")
     print("\nType 'exit' to quit.\n")
 
