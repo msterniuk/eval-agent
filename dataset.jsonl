@@ -1,6 +1,6 @@
 {"prompt": "What currency was used for the booking with hotel code SHGMH and check-in date August 20 2015?", "expected_value": "CNY"}
 {"prompt": "What is the room type code for the booking at hotel SHGMH with confirmation number 67738126?", "expected_value": "OQNS"}
-{"prompt": "What is the total room rate amount for the booking at hotel MQEAP with confirmation number 68259404?", "expected_value": "75.34"}
+{"prompt": "What was the total room rate amount for the booking at hotel MQEAP with confirmation number 68259404?", "expected_value": "75.34"}
 {"prompt": "What currency was used for the booking at hotel MQEAP with confirmation number 68259404?", "expected_value": "USD"}
 {"prompt": "What is the first name of the guest for the booking at hotel MSPRG with confirmation number 46159042?", "expected_value": "Bruce"}
 {"prompt": "What is the last name of the guest for the booking at hotel MSPRG with confirmation number 46159042?", "expected_value": "Britton"}
