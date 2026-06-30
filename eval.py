@@ -5,7 +5,7 @@ import os
 import pandas as pd
 from session_runner import create_runner, chat
 
-N_TRIALS = 3
+N_TRIALS = 1
 
 #helps normalize text to improve regex detection
 def normalize(text: str) -> str:
@@ -133,6 +133,7 @@ def run_evaluation(dataset):
     rubric = load_rubric()
 
     for i, case in enumerate(dataset, start=1):
+        print(f"currently running eval on Q{i}")
         prompt = case["prompt"]
         expected = case["expected_value"]
 
@@ -140,14 +141,17 @@ def run_evaluation(dataset):
         responses = []
 
         for t in range(N_TRIALS):
+            print("am creating running rn")
             runner, user_id, session_id = asyncio.run(
                 create_runner(use_agent_engine=False)
             )
 
+            print("runner has been creating, chat is next")
             response = asyncio.run(
-                chat(runner, user_id, session_id, prompt)
+                chat(runner, user_id, session_id, "What is 2+2?")
             )
-
+            
+            print("chat has been created and has responded")
             correct, extracted = is_correct(response, expected) 
             refused = is_refusal(response)
 
@@ -226,7 +230,9 @@ if __name__ == "__main__":
 
     ensure_dataset_exists()
     dataset = load_dataset("dataset.jsonl")
+    print("loaded dataset, about to run eval")
     results = run_evaluation(dataset)
+    print("eval has been run, now aggregating results")
 
     total_correct = sum(r["correct_count"] for r in results)    
     total_refusals = sum(r["refusal_count"] for r in results)

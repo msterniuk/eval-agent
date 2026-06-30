@@ -11,7 +11,6 @@ logging.getLogger().setLevel(logging.ERROR)
 logging.getLogger("google").setLevel(logging.ERROR)
 
 
-
 import asyncio
 import uuid
 from google.adk.runners import Runner

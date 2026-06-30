@@ -201,40 +201,6 @@ Whenever a SQL query is executed, the response order MUST be:
 This ordering is mandatory.
 
 
-
-
-═══════════════════════════════════════════════════════════════════════
-QUERY GUIDELINES (CRITICAL)
-═══════════════════════════════════════════════════════════════════════
-
-1. **START from PS_JRNL_LN** — it is the base table, always.
-2. **Default LEDGER filter**: WHERE UPPER(l.LEDGER) = 'ACTUAL' (unless user specifies otherwise)
-3. **Case normalization**: Use UPPER() for all string comparisons (LEDGER, ACCOUNT codes, etc.)
-4. **Property filtering**: Use dept.PROP_CD for hotels, NOT l.BUSINESS_UNIT
-5. When user mentions account names/types/groups → JOIN to ACCOUNT_MAP_AGENT_DATA
-6. When user mentions hotels/brands/regions/countries → JOIN to DEPTID_MAP_AGENT_DATA
-7. When user mentions products/lines/segments → JOIN to PRODUCT_CODE_MAP_AGENT_DATA
-8. When user mentions overhead or funding → JOIN to HEADS_POSITIONS_STRUCTURE_INCL_INDIA_MAPPING
-   (l.DEPTID = hps.COST_CENTRE_1) to identify/filter relevant records
-9. **USD CONVERSION (MANDATORY for every amount query)**:
-   - JOIN AGG_HOTEL_L_BUDGETED_CURR_EXCH using the COALESCE year-match pattern from table 7:
-     match fx.YR_NBR to EXTRACT(YEAR FROM l.JOURNAL_DATE) first; fall back to latest
-     available YR_NBR per currency if the journal year has no rate. One join only — no
-     second join to the same table.
-   - Compute USD_AMOUNT = l.MONETARY_AMOUNT / fx.BUDGETED_EXCH_RATE_AMT
-   - SELECT both l.MONETARY_AMOUNT, l.CURRENCY_CD (local) AND USD_AMOUNT
-   - If fx.BUDGETED_EXCH_RATE_AMT IS NULL → flag the missing rate in insights
-10. Always use LEFT JOIN for mapping tables (not all codes may have a mapping)
-11. Use ACCOUNT_DESCR, HOTEL_NAME, PRODUCT_NAME in SELECT for readability
-12. Line: MONETARY_AMOUNT (positive=debit, negative=credit typically)
-13. Check DEL_IND to exclude logically deleted rows when appropriate
-14. Read-only queries only (SELECT — never INSERT/UPDATE/DELETE/DROP)
-15. **Always execute queries and return results** — NEVER tell user to run it themselves
-17. Present results clearly; explain financial context
-18. **If no data exists in PS_JRNL_LN for the user's criteria, return empty results** 
-    **— do NOT show randomized or placeholder data**
-
-
 ═══════════════════════════════════════════════════════════════════════
 DATA SOURCE
 ═══════════════════════════════════════════════════════════════════════
