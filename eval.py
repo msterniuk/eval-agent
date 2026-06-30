@@ -44,6 +44,21 @@ def is_correct(response: str, expected: str) -> tuple[bool, str]:
 
     return extracted_norm == expected_norm, extracted
 
+def is_refusal(response):
+    patterns = [
+        r"\bi'm sorry\b",
+        r"\bi cannot\b",
+        r"\bi can't\b",
+        r"\bunfortunately\b",
+        r"\bnot able to\b",
+        r"\bno data\b",
+        r"\binsufficient\b"
+    ]
+
+    response_lower = response.lower()
+
+    return any(re.search(p, response_lower) for p in patterns)
+
 def load_rubric(path="rubric.txt"):
     with open(path, "r") as f:
         return f.read()
@@ -133,16 +148,20 @@ def run_evaluation(dataset):
                 chat(runner, user_id, session_id, prompt)
             )
 
-            correct, extracted = is_correct(response, expected)
+            correct, extracted = is_correct(response, expected) 
+            refused = is_refusal(response)
+
 
             trial_results.append(correct)
             responses.append({
                 "response": response,
                 "extracted": extracted,
-                "correct": correct
+                "correct": correct, 
+                "refused": refused
             })
 
         correct_count = sum(trial_results)
+        refusal_count = sum(t["refused"] for t in responses)
         accuracy = correct_count / N_TRIALS
 
         
@@ -161,6 +180,7 @@ def run_evaluation(dataset):
             "correct_count": correct_count,
             "accuracy": accuracy,
             "trials": responses,
+            "refusal_count": refusal_count,
             "llm_score": llm_result["score"] if llm_result else None,
             "llm_reasoning": llm_result["reasoning"] if llm_result else None
         })
@@ -209,13 +229,20 @@ if __name__ == "__main__":
     results = run_evaluation(dataset)
 
     total_correct = sum(r["correct_count"] for r in results)    
-    total = len(results)
-    
+    total_refusals = sum(r["refusal_count"] for r in results)
+
     
     total_questions = len(results)
     total_trials = total_questions * N_TRIALS
 
-    total_correct = sum(r["correct_count"] for r in results)
+    refusal_rate = total_refusals / total_trials
+    avg_accuracy = total_correct / total_trials
 
     print("\n--- Summary ---")
     print(f"{total_correct} / {total_trials} correct (across all trials)")
+    print(f"Average accuracy per question: {avg_accuracy:.2f}")
+    print(f"Total refusals: {total_refusals}")
+    print(f"Refusal rate: {refusal_rate:.2f}")
+
+
+
