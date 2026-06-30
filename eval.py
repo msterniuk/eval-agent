@@ -67,6 +67,20 @@ def convert_excel_to_jsonl(input_path="input.xlsx", output_path="dataset.jsonl")
     print(f"✅ Converted {input_path} → {output_path}")
 
 
+
+def ensure_dataset_exists():
+    if not os.path.exists("dataset.jsonl"):
+        print("dataset.jsonl not found — generating from Excel...")
+        
+        if not os.path.exists("input.xlsx"):
+            raise FileNotFoundError("❌ input.xlsx not found in working directory.")
+
+        convert_excel_to_jsonl("input.xlsx", "dataset.jsonl")
+    else:
+        print("✅ dataset.jsonl already exists — skipping conversion")
+
+
+
 def llm_judge(prompt, expected, trials, rubric):
     trial_text = ""
 
@@ -189,6 +203,8 @@ def print_failure_details(result):
 
 #runs the evaluation + guards against import runs
 if __name__ == "__main__":
+
+    ensure_dataset_exists()
     dataset = load_dataset("dataset.jsonl")
     results = run_evaluation(dataset)
 
