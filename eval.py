@@ -95,6 +95,18 @@ def ensure_dataset_exists():
         print("✅ dataset.jsonl already exists — skipping conversion")
 
 
+async def safe_chat(runner, user_id, session_id, prompt):
+    try:
+        return await asyncio.wait_for(
+            chat(runner, user_id, session_id, prompt),
+            timeout=30
+        )
+    except asyncio.TimeoutError:
+        return "TIMEOUT"
+    except Exception as e:
+        return f"ERROR: {str(e)}"
+
+
 
 def llm_judge(prompt, expected, trials, rubric):
     trial_text = ""
@@ -148,12 +160,20 @@ def run_evaluation(dataset):
 
             print("runner has been creating, chat is next")
             response = asyncio.run(
-                chat(runner, user_id, session_id, "What is 2+2?")
+                safe_chat(runner, user_id, session_id, "What is 2+2?")
             )
             
-            print("chat has been created and has responded")
-            correct, extracted = is_correct(response, expected) 
-            refused = is_refusal(response)
+            
+            if response in ["TIMEOUT"] or response.startswith("ERROR"):
+                print("chat response has timed or sql query has failed")
+                correct = False
+                extracted = None
+                refused = False
+
+            else: 
+                print("chat has been created and has responded")
+                correct, extracted = is_correct(response, expected) 
+                refused = is_refusal(response)
 
 
             trial_results.append(correct)
