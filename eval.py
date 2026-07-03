@@ -72,7 +72,7 @@ def load_dataset(path="dataset.jsonl"):
     return dataset
 
 def convert_excel_to_jsonl(input_path="input.xlsx", output_path="dataset.jsonl"):
-    df = pd.read_excel(input_path)
+    df = pd.read_excel(input_path, engine="openpyxl")
     df = df.astype(str)  # ensure consistency
 
     with open(output_path, "w") as f:
