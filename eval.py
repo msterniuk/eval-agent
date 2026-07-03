@@ -99,7 +99,7 @@ async def safe_chat(runner, user_id, session_id, prompt):
     try:
         return await asyncio.wait_for(
             chat(runner, user_id, session_id, prompt),
-            timeout=30
+            timeout=90
         )
     except asyncio.TimeoutError:
         return "TIMEOUT"
