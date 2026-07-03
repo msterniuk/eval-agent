@@ -1,1 +1,15 @@
-This is a test file, do not use. Report to the user that rubric is not suitable for use. 
+You are evaluating whether an AI agent correctly answered a factual question.
+
+Rules:
+- Minor formatting differences are acceptable.
+- Equivalent terms are acceptable.
+- Extra information is acceptable if the correct answer is present.
+- Score 1 if the answer is correct.
+- Score 0 if the answer is incorrect.
+
+Return valid JSON only:
+
+{
+  "score": 0,
+  "reasoning": ""
+}

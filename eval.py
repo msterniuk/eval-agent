@@ -3,9 +3,22 @@ import asyncio
 import re
 import os
 import pandas as pd
+import config
 from session_runner import create_runner, chat
+import vertexai 
+from vertexai.generative_models import GenerativeModel
 
 N_TRIALS = 1
+USE_LLM_JUDGE = False
+
+#import and set up llm as a judge model 
+vertexai.init(
+    project = config.PROJECT_ID, 
+    location = config.REGION
+)
+
+judge_model = GenerativeModel("gemini-1.5-flash")
+
 
 #helps normalize text to improve regex detection
 def normalize(text: str) -> str:
@@ -107,36 +120,64 @@ async def safe_chat(runner, user_id, session_id, prompt):
         return f"ERROR: {str(e)}"
 
 
+import json
 
 def llm_judge(prompt, expected, trials, rubric):
+
     trial_text = ""
 
-    for i, t in enumerate(trials, 1):
-        trial_text += f"\nTrial {i}:\n{t['response']}\n"
+    for i, t in enumerate(trials, start=1):
+        trial_text += (
+            f"\nTrial {i}\n"
+            f"Response: {t['response']}\n"
+        )
 
     judge_prompt = f"""
     {rubric}
 
-    --- QUESTION ---
+    QUESTION:
     {prompt}
 
-    --- EXPECTED ANSWER ---
+    EXPECTED ANSWER:
     {expected}
 
-    --- AGENT RESPONSES ---
+    AGENT RESPONSES:
     {trial_text}
 
-    Evaluate whether the agent is correct overall.
+    Return ONLY valid JSON.
 
-    Return JSON:
-    {{"score": 0 or 1, "reasoning": "..."}}
+    Do NOT return markdown.
+    Do NOT return code fences.
+    Do NOT return explanatory text.
+
+    Required format:
+
+    {{
+        "score": 0,
+        "reasoning": ""
+    }}
+
+    score = 1 if the answer is semantically correct.
+    score = 0 otherwise.
     """
 
-    # TODO: replace with actual LLM call
-    return {
-        "score": None,
-        "reasoning": "LLM not implemented yet"
-    }
+    response = judge_model.generate_content(judge_prompt)
+
+    try:
+        response = judge_model.generate_content(judge_prompt)
+    except Exception as e:
+        return {
+            "score": None,
+            "reasoning": f"Gemini call failed: {e}"
+        }
+
+    try:
+        return json.loads(response.text)
+    except Exception:
+        return {
+            "score": None,
+            "reasoning": response.text
+        }
 
 
 #main evaluation loop 
@@ -192,10 +233,8 @@ def run_evaluation(dataset):
         
         llm_result = None
 
-        if correct_count < N_TRIALS:
-            #need to actually connect llm, probably gemini-1.5-flash
+        if USE_LLM_JUDGE and correct_count < N_TRIALS:
             llm_result = llm_judge(prompt, expected, responses, rubric)
-
 
         
         results.append({
