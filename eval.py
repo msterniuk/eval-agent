@@ -160,9 +160,10 @@ def run_evaluation(dataset):
 
             print("runner has been creating, chat is next")
             response = asyncio.run(
-                safe_chat(runner, user_id, session_id, "What is 2+2?")
+                safe_chat(runner, user_id, session_id, prompt)
             )
             
+            print_debug_details(results)
             
             if response in ["TIMEOUT"] or response.startswith("ERROR"):
                 print("chat response has timed or sql query has failed")
@@ -216,8 +217,8 @@ def run_evaluation(dataset):
 
 
 
-def print_failure_details(result):
-    print("\n--- FAILURE BREAKDOWN ---")
+def print_debug_details(results):
+    print("\n--- DEBUG BREAKDOWN ---")
 
     for r in results:
         if r["accuracy"] < 1:
