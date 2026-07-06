@@ -9,15 +9,16 @@ import vertexai
 from vertexai.generative_models import GenerativeModel
 
 N_TRIALS = 1
-USE_LLM_JUDGE = False
+USE_LLM_JUDGE = True
 
 #import and set up llm as a judge model 
+print(config.PROJECT_ID)
 vertexai.init(
     project = config.PROJECT_ID, 
     location = config.REGION
 )
 
-judge_model = GenerativeModel("gemini-1.5-flash")
+judge_model = GenerativeModel("gemini-2.5-flash")
 
 
 #helps normalize text to improve regex detection
@@ -249,10 +250,20 @@ def run_evaluation(dataset):
             "llm_reasoning": llm_result["reasoning"] if llm_result else None
         })
 
+        llm_runs = sum(
+            1 for r in results
+            if r["llm_score"] is not None
+        )
+
+        llm_passes = sum(
+            1 for r in results
+            if r["llm_score"] == 1
+        )
+
 
         print(f"Q{i}: {correct_count}/{N_TRIALS} correct ({accuracy:.2f})")
 
-    return results
+    return results, llm_runs, llm_passes
 
 
 
@@ -291,7 +302,7 @@ if __name__ == "__main__":
     ensure_dataset_exists()
     dataset = load_dataset("dataset.jsonl")
     print("loaded dataset, about to run eval")
-    results = run_evaluation(dataset)
+    results, llm_runs, llm_passes = run_evaluation(dataset)
     print("eval has been run, now aggregating results")
 
     total_correct = sum(r["correct_count"] for r in results)    
@@ -304,11 +315,18 @@ if __name__ == "__main__":
     refusal_rate = total_refusals / total_trials
     avg_accuracy = total_correct / total_trials
 
+    print("\n--- Configuration ---")
+    print(f"LLM judge enabled: {USE_LLM_JUDGE}")
+    print(f"Number of trials: {N_TRIALS}")
+
     print("\n--- Summary ---")
     print(f"{total_correct} / {total_trials} correct (across all trials)")
     print(f"Average accuracy per question: {avg_accuracy:.2f}")
     print(f"Total refusals: {total_refusals}")
     print(f"Refusal rate: {refusal_rate:.2f}")
+
+    print(f"Total LLM Runs: {llm_runs}")
+    print(f"Total LLM Passes: {llm_passes}")
 
 
 
