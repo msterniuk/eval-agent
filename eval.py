@@ -180,10 +180,14 @@ def is_correct(response: str, expected) -> tuple[bool, str]:
                 "Determine whether the agent correctly refused to answer.",
                 "UNANSWERABLE",
                 [{"response": response}],
-                rubric
+                rubric, 
+                evaluation_mode = "UNANSWERABLE"
             )
 
-            if llm_result["score"] == 1:
+            if (
+                llm_result["score"] is not None and
+                llm_result["score"] == 1
+            ): 
                 return True, "LLM_UNANSWERABLE_PASS"
 
         return False, "HALLUCINATED_ANSWER"
@@ -293,9 +297,7 @@ async def safe_chat(runner, user_id, session_id, prompt):
         return f"ERROR: {str(e)}"
 
 
-import json
-
-def llm_judge(prompt, expected, trials, rubric):
+def llm_judge(prompt, expected, trials, rubric, evaluation_mode = "NORMAL"):
 
     trial_text = ""
 
@@ -305,36 +307,87 @@ def llm_judge(prompt, expected, trials, rubric):
             f"Response: {t['response']}\n"
         )
 
-    judge_prompt = f"""
-    {rubric}
+    if evaluation_mode == "UNANSWERABLE":
 
-    QUESTION:
-    {prompt}
+        judge_prompt = f"""
+        The correct outcome is that the question could NOT be answered.
 
-    EXPECTED ANSWER:
-    {expected}
+        Determine whether the AI agent appropriately:
+        - explained that data was unavailable
+        - explained missing columns/tables
+        - explained insufficient information
+        - requested clarification because the question was ambiguous
 
-    AGENT RESPONSES:
-    {trial_text}
+        Agent response:
 
-    Return ONLY valid JSON.
+        {trial_text}
 
-    Do NOT return markdown.
-    Do NOT return code fences.
-    Do NOT return explanatory text.
+        Return ONLY valid JSON:
 
-    Required format:
+        {{
+            "score": 0,
+            "reasoning": ""
+        }}
+        """
 
-    {{
-        "score": 0,
-        "reasoning": ""
-    }}
+    else:
 
-    score = 1 if the answer is semantically correct.
-    score = 0 otherwise.
-    """
+        judge_prompt = f"""
+        {rubric}
 
-    response = judge_model.generate_content(judge_prompt)
+        QUESTION:
+        {prompt}
+
+        EXPECTED ANSWER:
+        {expected}
+
+        AGENT RESPONSES:
+        {trial_text}
+
+        Return ONLY valid JSON.
+
+        Do NOT return markdown.
+        Do NOT return code fences.
+        Do NOT return explanatory text.
+
+        Required format:
+
+        {{
+            "score": 0,
+            "reasoning": ""
+        }}
+
+        score = 1 if the answer is semantically correct.
+        score = 0 otherwise.
+        """
+        judge_prompt = f"""
+        {rubric}
+
+        QUESTION:
+        {prompt}
+
+        EXPECTED ANSWER:
+        {expected}
+
+        AGENT RESPONSES:
+        {trial_text}
+
+        Return ONLY valid JSON.
+
+        Do NOT return markdown.
+        Do NOT return code fences.
+        Do NOT return explanatory text.
+
+        Required format:
+
+        {{
+            "score": 0,
+            "reasoning": ""
+        }}
+
+        score = 1 if the answer is semantically correct.
+        score = 0 otherwise.
+        """
 
     try:
         response = judge_model.generate_content(judge_prompt)
