@@ -449,15 +449,37 @@ def run_evaluation(dataset):
                 print(f"Response : {response[:500]}")
                 print("---------------------\n")
 
+                llm_result = llm_judge(
+                prompt=prompt,
+                expected=expected,
+                trials=[{"response": response}],
+                rubric=rubric
+                )
+
+                if llm_result["score"] == 1:
+                    print("LLM OVERRIDE: PASS")
+                    correct = True
+                    result_detail = "LLM_PASS"
+
             trial_results.append(correct)
             responses.append({
                 "response": response,
                 "extracted": extracted,
+                "failure_category": (
+                    result_detail
+                    if not correct
+                    else None
+                )
                 "correct": correct, 
                 "refused": refused
             })
 
         correct_count = sum(trial_results)
+        failure_categories = [
+            r["failure_category"]
+              for r in responses
+              if r["failure_category"] is not None
+        ]
         refusal_count = sum(t["refused"] for t in responses)
         accuracy = correct_count / N_TRIALS
         expected_type = classify_expected(expected)
@@ -478,6 +500,7 @@ def run_evaluation(dataset):
             "trials": responses,
             "expected_type" : expected_type, 
             "refusal_count": refusal_count,
+            "failure_categories" : failure_categories, 
             "llm_score": llm_result["score"] if llm_result else None,
             "llm_reasoning": llm_result["reasoning"] if llm_result else None
         })
@@ -507,6 +530,9 @@ def print_debug_details(results):
             print(f"\n--- Q{r['id']} FAILED ({r['correct_count']}/{N_TRIALS}) ---")
             print(f"Prompt: {r['prompt']}")
             print(f"Expected: {r['expected']}")
+            print("Failure Categories:")
+            print(r["failure_categories"])
+
 
             for i, trial in enumerate(r["trials"], start=1):
                 status = "✅" if trial["correct"] else "❌"
