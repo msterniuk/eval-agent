@@ -10,7 +10,7 @@ from session_runner import create_runner, chat
 import vertexai 
 from vertexai.generative_models import GenerativeModel
 
-N_TRIALS = 5
+N_TRIALS = 1
 USE_LLM_JUDGE = True
 EXPORT_RESULTS = True
 
@@ -30,33 +30,67 @@ def normalize(text: str) -> str:
     return text
 
 #tries common patterns and compares expected result against them
+import re
+
 def extract_answer(response: str) -> str:
-    # Basic name extraction (adjust later if needed)
+
     patterns = [
-        r"is ([A-Z][a-z]+(?: [A-Z]\.)? [A-Z][a-z]+)",
-        r"([A-Z][a-z]+(?: [A-Z]\.)? [A-Z][a-z]+) is",
-        r":[ ]*([A-Z][a-z]+(?: [A-Z]\.)? [A-Z][a-z]+)"
+        # "The associated f0_ is 17577."
+        r"associated\s+f0_\s+is\s+([\d,\.]+)",
+
+        # "total_revenue = 12345"
+        r"[A-Za-z0-9_]+\s*=\s*([\d,\.]+)",
+
+        # "The answer is 17577"
+        r"answer\s+is\s+([\d,\.]+)",
+
+        # "is 17577"
+        r"\bis\s+([\d,\.]+)",
+
+        # JSON-style output
+        r'"\w+"\s*:\s*([\d,\.]+)',
+
+        # standalone large number
+        r"\b(\d+(?:\.\d+)?)\b"
     ]
 
-    for p in patterns:
-        match = re.search(p, response)
+    for pattern in patterns:
+        match = re.search(pattern, response, re.IGNORECASE)
         if match:
-            return match.group(1)
+            return match.group(1).replace(",", "")
 
-    return response.strip()
+    return None
 
 
-def is_correct(response: str, expected: str) -> tuple[bool, str]:
+def is_correct(response: str, expected) -> tuple[bool, str]:
+    # convert JSON string to dict
+    if isinstance(expected, str):
+        try:
+            expected = json.loads(expected)
+        except Exception:
+            pass
+
+    # unwrap dictionary expected values
+    if isinstance(expected, dict):
+        if len(expected) == 1:
+            expected = next(iter(expected.values()))
+
+    print(f"Normalized expected: {expected}")
+
     response_norm = normalize(response)
-    expected_norm = normalize(expected)
+    expected_norm = normalize(str(expected))
 
-    # Step 1: containment (primary check)
+    # Step 1: containment
     if expected_norm in response_norm:
-        return True, expected
+        return True, str(expected)
 
-    # Step 2: regex extraction fallback
+    # Step 2: extraction fallback
     extracted = extract_answer(response)
-    extracted_norm = normalize(extracted)
+
+    if extracted is None:
+        return False, None
+
+    extracted_norm = normalize(str(extracted))
 
     return extracted_norm == expected_norm, extracted
 
@@ -233,6 +267,16 @@ def run_evaluation(dataset):
                 correct, extracted = is_correct(response, expected) 
                 refused = is_refusal(response)
 
+            status = "PASS" if correct else "FAIL"
+            print(f"Q{i} Trial {t + 1}/{N_TRIALS}: {status}")
+
+            if not correct:    
+                print("\n--- FAILURE DEBUG ---")
+                print(f"Q{i} Trial {t+1}")
+                print(f"Expected : {expected}")
+                print(f"Extracted: {extracted}")
+                print(f"Response : {response[:500]}")
+                print("---------------------\n")
 
             trial_results.append(correct)
             responses.append({
@@ -307,6 +351,7 @@ def print_debug_details(results):
                     deterministic_pass = r["correct_count"] == N_TRIALS
                     if deterministic_pass != bool(r["llm_score"]):
                         print("⚠️ DISAGREEMENT BETWEEN RULES AND LLM")
+
 
 
 

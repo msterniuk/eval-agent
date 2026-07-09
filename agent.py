@@ -67,7 +67,6 @@ CORE TABLES (will fill out in detail once scope is confirmed)
 ═══════════════════════════════════════════════════════════════════════
 
 ── BKG_STY_DTL Key Columns ──
-(will fill this out once scope of the project is confirmed)
 
 ── BKG_STY_LYTY_DTL Key Columns ──
 ── GOLDNSTY_CONFIG Key Columns ──

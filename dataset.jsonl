@@ -1,10 +1,49 @@
-{"prompt": "What currency was used for the booking with hotel code SHGMH and check-in date August 20 2015?", "expected_value": "CNY"}
-{"prompt": "What is the room type code for the booking at hotel SHGMH with confirmation number 67738126?", "expected_value": "OQNS"}
-{"prompt": "What was the total room rate amount for the booking at hotel MQEAP with confirmation number 68259404?", "expected_value": "75.34"}
-{"prompt": "What currency was used for the booking at hotel MQEAP with confirmation number 68259404?", "expected_value": "USD"}
-{"prompt": "What is the first name of the guest for the booking at hotel MSPRG with confirmation number 46159042?", "expected_value": "Bruce"}
-{"prompt": "What is the last name of the guest for the booking at hotel MSPRG with confirmation number 46159042?", "expected_value": "Britton"}
-{"prompt": "What is the hotel code for the booking with guest Graciela Marshall and check-in date April 21 2026?", "expected_value": "FLLRS"}
-{"prompt": "What is the room number for the stay at hotel FLLRS for guest Graciela Marshall?", "expected_value": "135"}
-{"prompt": "What is the currency used for the booking with confirmation number 25770978 at hotel NYCMA?", "expected_value": "USD"}
-{"prompt": "What is the first name of the guest for the booking at hotel NYCMA with confirmation number 25770978?", "expected_value": "FRITZLER"}
+{"prompt": "What is the total food revenue () in USD from completed stays at hotel 'ATHGR' in November 2025?", "expected_value": "{\"total_food_rev_usd\": 65444.430019}"}
+{"prompt": "List all unique corporate account numbers () that stayed at hotel 'MLBOC' with a stay starting after August 1st, 2020.", "expected_value": "[{\"CORP_ACCT_NBR\":\"1\"},{\"CORP_ACCT_NBR\":\"100005167\"},{\"CORP_ACCT_NBR\":\"100007951\"},{\"CORP_ACCT_NBR\":\"100008021\"},{\"CORP_ACCT_NBR\":\"100008994\"}]"}
+{"prompt": "Find the average check-in rate () for bookings cancelled with a penalty indicator set to 'Y' in the brand 'CP'.", "expected_value": "{\"avg_cancelled_rate\": 2252.026300717}"}
+{"prompt": "What is the highest daily room rate in USD () recorded in the day-level details for check-outs on '2020-08-09'?", "expected_value": "{\"max_daily_rate\": 17577}"}
+{"prompt": "Calculate the total beverage charge () for stays that checked in between '2020-08-01' and '2020-08-15' at hotel 'CHIEL'.", "expected_value": "{\"total_bev_charge\": 0}"}
+{"prompt": "How many distinct loyalty memberships () received points from stays at brand 'HI' during 2020?", "expected_value": "{\"count_mbrshp\": 3192204}"}
+{"prompt": "List the top 5 room types () by total room revenue () for completed bookings.", "expected_value": "[{\"RM_TYP_CD\":\"PM\",\"total_rev\":26388087395.58},{\"RM_TYP_CD\":\"OQNN\",\"total_rev\":25450751748.22},{\"RM_TYP_CD\":\"KNGN\",\"total_rev\":12620324399.62},{\"RM_TYP_CD\":\"TQNN\",\"total_rev\":11780767683.55},{\"RM_TYP_CD\":\"TTWN\",\"total_rev\":9762277074.1}]"}
+{"prompt": "What is the total number of nights () booked where the sell channel code was 'WEB' in the last quarter of 2025?", "expected_value": "{\"sum_accom_nt_qty\": 23450630}"}
+{"prompt": "Find the maximum penalty amount () charged for cancelled stays in 2025.", "expected_value": "{\"max_bkg_pnlty_amt\": null}"}
+{"prompt": "How many bookings have a difference between check-in date () and confirmation date () of more than 30 days?", "expected_value": "{\"count\": 689935923}"}
+{"prompt": "Show the total miscellaneous pet charges () by hotel code () for stays in 2025.", "expected_value": "[{\"HTL_CD\":\"XNVUK\",\"pet_charge\":\"0\"},{\"HTL_CD\":\"MAATP\",\"pet_charge\":\"0\"},{\"HTL_CD\":\"PHXUP\",\"pet_charge\":\"0\"},{\"HTL_CD\":\"BJASC\",\"pet_charge\":\"0\"},{\"HTL_CD\":\"BLIHI\",\"pet_charge\":\"0\"}]"}
+{"prompt": "What is the total net qualifying revenue in USD () for members whose preferred alliance () is 'HPC'?", "expected_value": "{\"total_net_qual_rev_usd\": 138730508991.7}"}
+{"prompt": "List all stays where more than 3 guests () were registered at hotel 'ATHGR'.", "expected_value": "[{\"BKG_CONF_NBR\":\"-100616764\",\"BKG_CK_IN_DT\":null,\"HTL_CD\":\"ATHGR\",\"STY_GST_QTY\":\"4\",\"BKG_TOT_RM_RATE_AMT\":null}]"}
+{"prompt": "Find the total non-revenue tax charge () for hotel 'MLBOC' in 2025.", "expected_value": "{\"total_non_rev_tax\": 914717.009938}"}
+{"prompt": "What is the average number of nights () per booking for each booking channel ()?", "expected_value": "[{\"SELL_CHNL_CD\":\"UNK\",\"avg_nights\":13.5341324682254}]"}
+{"prompt": "Count the number of reservations that did not participate in the full folio program ( = 'N').", "expected_value": "{\"total_rows\": 23112111}"}
+{"prompt": "Find the total room rates booked vs actually stayed at 'ATHGR' in 2025.", "expected_value": "{\"booked_revenue\":23992592.66,\"actual_revenue\":10025467.7}"}
+{"prompt": "Calculate the total commission due () for bookings checked out on '2025-11-17'.", "expected_value": "{\"total_comm\": null}"}
+{"prompt": "Show the total meeting and banquet revenue () grouped by original rate category code ().", "expected_value": "[{\"ORIG_RATE_CATGY_CD\":null,\"total_rev\":\"2051252656463.890105\"}]"}
+{"prompt": "List all checkout dates with an average stay length of more than 5 nights at hotel 'ATHGR'.", "expected_value": "[{\"BKG_CK_OUT_DT\":\"2023-12-31\",\"avg_nights\":\"334.04845814977961\"}]"}
+{"prompt": "How are bookings doing recently?", "expected_value": NaN}
+{"prompt": "Find our best-performing hotel code.", "expected_value": NaN}
+{"prompt": "What is the average rate?", "expected_value": NaN}
+{"prompt": "Show our current occupancy levels.", "expected_value": NaN}
+{"prompt": "What is the total revenue for the CP chain?", "expected_value": NaN}
+{"prompt": "Show the leisure bookings trend.", "expected_value": NaN}
+{"prompt": "Predict our future room revenue for the next 12 months using external market indicators.", "expected_value": NaN}
+{"prompt": "List the ratings and text reviews of hotel 'ATHGR' submitted by TripAdvisor users.", "expected_value": NaN}
+{"prompt": "What was the average temperature and weather impact on bookings at our Chicago properties?", "expected_value": NaN}
+{"prompt": "How does our competitor's Average Daily Rate (ADR) compare to our properties in Europe?", "expected_value": NaN}
+{"prompt": "What is the loyalty member's lifetime tier level (e.g., Gold, Platinum) for member ID 102455?", "expected_value": NaN}
+{"prompt": "Show the parking lot usage fees and parking occupancy rate for hotel 'MLBOC'.", "expected_value": NaN}
+{"prompt": "List the email addresses and phone numbers of guests who stayed in August 2020.", "expected_value": NaN}
+{"prompt": "What is the total discount amount applied to the booking segment using coupon codes?", "expected_value": NaN}
+{"prompt": "Filter the stays by the guest's age group and demographic category.", "expected_value": NaN}
+{"prompt": "List the employee ID of the receptionist who checked in guest confirmation '855723'.", "expected_value": NaN}
+{"prompt": "What are the total carbon emissions and sustainability scores of stays at 'ATHGR'?", "expected_value": NaN}
+{"prompt": "What is the total number of bookings that stayed in August 2020?", "expected_value": "{\"total_bookings\": 4856425}"}
+{"prompt": "Find the total number of stays that occurred at hotel 'CHIEL'.", "expected_value": "{\"count_pms_conf\": 343852}"}
+{"prompt": "Calculate the total actual room revenue generated in USD on August 8, 2020, across all hotels.", "expected_value": "{\"daily_rev\": 45364833.85}"}
+{"prompt": "How many total room-nights were spent in August 2020?", "expected_value": "{\"total_room_nights\": 5424852}"}
+{"prompt": "What is the average room rate per night for stays in brand 'CP' during 2025?", "expected_value": NaN}
+{"prompt": "Show the total number of distinct nights spent grouped by sequence number ().", "expected_value": "[{\"DY_SEQ_NBR\":\"1\",\"total_nights\":\"1665809584\"}]"}
+{"prompt": "Calculate total room rate revenue booked vs actually realized in USD for hotel 'ATHGR' in 2025.", "expected_value": "[{\"booked_revenue\":\"23992592.66\",\"actual_revenue\":\"10025467.7\"}]"}
+{"prompt": "Show the most valuable corporate accounts based on total spend in 2025.", "expected_value": "[{\"CORP_ACCT_NBR\":\"100860933\",\"total_spend\":\"165854494.21\"}]"}
+{"prompt": "List our underperforming rate categories by average check-in rate.", "expected_value": NaN}
+{"prompt": "Find the highest quality stays based on score metrics.", "expected_value": "[{\"PMS_CONF_NBR\":\"018924592\",\"STY_FRST_NM\":\"Jen\",\"STY_LST_NM\":\"Chi\",\"total_score\":\"4\"}]"}
+{"prompt": "Show the most successful booking channel by volume of reservations.", "expected_value": "[{\"SELL_CHNL_CD\":\"INN\",\"booking_volume\":\"3121523327\"}]"}
+{"prompt": "Identify the hotels that are most successful at enrolling new members.", "expected_value": "[{\"HTL_CD\":\"ZYLEA\",\"total_enrollments\":\"684334\"}]"}
