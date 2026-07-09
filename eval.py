@@ -1,5 +1,6 @@
 import json
 import asyncio
+import math
 import re
 import os
 import pandas as pd
@@ -29,8 +30,90 @@ def normalize(text: str) -> str:
     text = re.sub(r"[^\w\s]", "", text)  # remove punctuation
     return text
 
-#tries common patterns and compares expected result against them
-import re
+def classify_expected(expected):
+
+    if expected is None:
+        return "NULL_VALUE"
+    
+    if isinstance(expected, str):
+        if expected.strip().lower() == "nan":
+            return "NAN_UNANSWERABLE"
+
+    if isinstance(expected, float) and math.isnan(expected):
+        return "NAN_UNANSWERABLE"
+
+    if isinstance(expected, (int, float)):
+        return "NUMERIC_SCALAR"
+
+    if isinstance(expected, str):
+
+        # JSON object
+        try:
+            parsed = json.loads(expected)
+
+            if isinstance(parsed, dict):
+                return "JSON_OBJECT"
+
+            if isinstance(parsed, list):
+                return "JSON_LIST"
+
+        except:
+            pass
+
+        return "STRING_OR_CODE"
+
+    return "STRING_OR_CODE"
+
+UNANSWERABLE_PATTERNS = [
+    "cannot answer",
+    "can't answer",
+    "unable to answer",
+    "insufficient information",
+    "insufficient data",
+    "not enough information",
+    "not enough data",
+    "unavailable in data sources",
+    "missing required column",
+    "missing required table",
+    "column does not exist",
+    "table does not exist",
+    "requires clarification",
+    "needs clarification",
+    "ambiguous request",
+]
+
+FAILURE_PATTERNS = [
+    "sql error",
+    "query failed",
+    "execution failed",
+    "unable to execute",
+    "failed to execute",
+    "column not found",
+    "column does not exist",
+    "table not found",
+    "table does not exist",
+    "invalid identifier",
+    "invalid column",
+    "timeout",
+    "timed out",
+]
+
+
+def is_valid_unanswerable_response(response: str) -> bool:
+    response = response.lower()
+
+    return any(
+        pattern in response
+        for pattern in UNANSWERABLE_PATTERNS
+    )
+
+def contains_failure_message(response: str) -> bool:
+    response = response.lower()
+
+    return any(
+        pattern in response
+        for pattern in FAILURE_PATTERNS
+    )
 
 def extract_answer(response: str) -> str:
 
@@ -76,9 +159,30 @@ def is_correct(response: str, expected) -> tuple[bool, str]:
             expected = next(iter(expected.values()))
 
     print(f"Normalized expected: {expected}")
-
+    
+    expected_type = classify_expected(expected)
     response_norm = normalize(response)
     expected_norm = normalize(str(expected))
+
+    # --------------------------------------------------
+    # Handle unanswerable / NAN questions
+    # --------------------------------------------------
+    if expected_type == "NAN_UNANSWERABLE":
+
+        if is_valid_unanswerable_response(response):
+            return True, "UNANSWERABLE"
+
+        return False, "HALLUCINATED_ANSWER"
+
+
+    # --------------------------------------------------
+    # Handle SQL / tool failures
+    # --------------------------------------------------
+    if expected_type != "NAN_UNANSWERABLE":
+
+        if contains_failure_message(response):
+            return False, "FAILURE_RESPONSE"
+
 
     # Step 1: containment
     if expected_norm in response_norm:
@@ -88,7 +192,7 @@ def is_correct(response: str, expected) -> tuple[bool, str]:
     extracted = extract_answer(response)
 
     if extracted is None:
-        return False, None
+        return False, "NO_EXTRACTION"
 
     extracted_norm = normalize(str(extracted))
 
