@@ -3,16 +3,18 @@ import asyncio
 import re
 import os
 import pandas as pd
+import csv
+from pathlib import Path
 import config
 from session_runner import create_runner, chat
 import vertexai 
 from vertexai.generative_models import GenerativeModel
 
-N_TRIALS = 1
+N_TRIALS = 5
 USE_LLM_JUDGE = True
+EXPORT_RESULTS = True
 
 #import and set up llm as a judge model 
-print(config.PROJECT_ID)
 vertexai.init(
     project = config.PROJECT_ID, 
     location = config.REGION
@@ -96,6 +98,24 @@ def convert_excel_to_jsonl(input_path="input.xlsx", output_path="dataset.jsonl")
     print(f"✅ Converted {input_path} → {output_path}")
 
 
+def export_results_to_csv(results, output_file="evaluation_results.csv"):
+    """
+    Export evaluation results to CSV.
+
+    Args:
+        results: list[dict]
+        output_file: str
+    """
+    if not results:
+        print("No results to export.")
+        return
+
+    with open(output_file, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=results[0].keys())
+        writer.writeheader()
+        writer.writerows(results)
+
+    print(f"Results exported to {Path(output_file).resolve()}")
 
 def ensure_dataset_exists():
     if not os.path.exists("dataset.jsonl"):
@@ -187,7 +207,6 @@ def run_evaluation(dataset):
     rubric = load_rubric()
 
     for i, case in enumerate(dataset, start=1):
-        print(f"currently running eval on Q{i}")
         prompt = case["prompt"]
         expected = case["expected_value"]
 
@@ -195,12 +214,10 @@ def run_evaluation(dataset):
         responses = []
 
         for t in range(N_TRIALS):
-            print("am creating running rn")
             runner, user_id, session_id = asyncio.run(
                 create_runner(use_agent_engine=False)
             )
 
-            print("runner has been creating, chat is next")
             response = asyncio.run(
                 safe_chat(runner, user_id, session_id, prompt)
             )
@@ -208,13 +225,11 @@ def run_evaluation(dataset):
             print_debug_details(results)
             
             if response in ["TIMEOUT"] or response.startswith("ERROR"):
-                print("chat response has timed or sql query has failed")
                 correct = False
                 extracted = None
                 refused = False
 
             else: 
-                print("chat has been created and has responded")
                 correct, extracted = is_correct(response, expected) 
                 refused = is_refusal(response)
 
@@ -272,15 +287,15 @@ def print_debug_details(results):
 
     for r in results:
         if r["accuracy"] < 1:
-            print(f"\nQ{r['id']} FAILED ({r['correct_count']}/{N_TRIALS})")
+            print(f"\n--- Q{r['id']} FAILED ({r['correct_count']}/{N_TRIALS}) ---")
             print(f"Prompt: {r['prompt']}")
             print(f"Expected: {r['expected']}")
 
             for i, trial in enumerate(r["trials"], start=1):
                 status = "✅" if trial["correct"] else "❌"
-                print(f"\nTrial {i}: {status}")
-                print("Extracted:", trial["extracted"])
-                print("Response:")
+                print(f"\n--- Trial {i}: {status} ---")
+                print("--- What Was Extracted: ---\n", trial["extracted"])
+                print("--- The Full Response: ---\n")
                 print(trial["response"])
 
             
@@ -301,9 +316,7 @@ if __name__ == "__main__":
 
     ensure_dataset_exists()
     dataset = load_dataset("dataset.jsonl")
-    print("loaded dataset, about to run eval")
     results, llm_runs, llm_passes = run_evaluation(dataset)
-    print("eval has been run, now aggregating results")
 
     total_correct = sum(r["correct_count"] for r in results)    
     total_refusals = sum(r["refusal_count"] for r in results)
@@ -327,6 +340,11 @@ if __name__ == "__main__":
 
     print(f"Total LLM Runs: {llm_runs}")
     print(f"Total LLM Passes: {llm_passes}")
+
+    #toggle whether to save results to csv or not 
+    if EXPORT_RESULTS:
+        export_results_to_csv(results)
+
 
 
 
