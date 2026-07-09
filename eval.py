@@ -146,6 +146,7 @@ def extract_answer(response: str) -> str:
 
 
 def is_correct(response: str, expected) -> tuple[bool, str]:
+    rubric = load_rubric()
     # convert JSON string to dict
     if isinstance(expected, str):
         try:
@@ -171,6 +172,19 @@ def is_correct(response: str, expected) -> tuple[bool, str]:
 
         if is_valid_unanswerable_response(response):
             return True, "UNANSWERABLE"
+
+        # ambiguous cases go to LLM
+        if USE_LLM_JUDGE:
+
+            llm_result = llm_judge(
+                "Determine whether the agent correctly refused to answer.",
+                "UNANSWERABLE",
+                [{"response": response}],
+                rubric
+            )
+
+            if llm_result["score"] == 1:
+                return True, "LLM_UNANSWERABLE_PASS"
 
         return False, "HALLUCINATED_ANSWER"
 
@@ -368,7 +382,7 @@ def run_evaluation(dataset):
                 refused = False
 
             else: 
-                correct, extracted = is_correct(response, expected) 
+                correct, result_detail = is_correct(response, expected) 
                 refused = is_refusal(response)
 
             status = "PASS" if correct else "FAIL"
@@ -378,7 +392,7 @@ def run_evaluation(dataset):
                 print("\n--- FAILURE DEBUG ---")
                 print(f"Q{i} Trial {t+1}")
                 print(f"Expected : {expected}")
-                print(f"Extracted: {extracted}")
+                print(f"Extracted: {result_detail}")
                 print(f"Response : {response[:500]}")
                 print("---------------------\n")
 
@@ -393,6 +407,7 @@ def run_evaluation(dataset):
         correct_count = sum(trial_results)
         refusal_count = sum(t["refused"] for t in responses)
         accuracy = correct_count / N_TRIALS
+        expected_type = classify_expected(expected)
 
         
         llm_result = None
@@ -408,6 +423,7 @@ def run_evaluation(dataset):
             "correct_count": correct_count,
             "accuracy": accuracy,
             "trials": responses,
+            "expected_type" : expected_type, 
             "refusal_count": refusal_count,
             "llm_score": llm_result["score"] if llm_result else None,
             "llm_reasoning": llm_result["reasoning"] if llm_result else None
