@@ -310,13 +310,19 @@ def llm_judge(prompt, expected, trials, rubric, evaluation_mode = "NORMAL"):
     if evaluation_mode == "UNANSWERABLE":
 
         judge_prompt = f"""
-        The correct outcome is that the question could NOT be answered.
+        The expected answer for this evaluation item is NAN_UNANSWERABLE.
 
-        Determine whether the AI agent appropriately:
-        - explained that data was unavailable
-        - explained missing columns/tables
-        - explained insufficient information
-        - requested clarification because the question was ambiguous
+        NAN_UNANSWERABLE means the agent should NOT provide a factual answer.
+
+        The agent should instead do one of the following:
+
+        - Explain that data is unavailable
+        - Explain that required columns/tables are unavailable
+        - Explain that the request cannot be answered from available data
+        - Request clarification because the question is ambiguous
+        - Explain that the request requires external information
+
+        The agent does NOT need to literally say "nan".
 
         Agent response:
 
@@ -328,6 +334,10 @@ def llm_judge(prompt, expected, trials, rubric, evaluation_mode = "NORMAL"):
             "score": 0,
             "reasoning": ""
         }}
+
+        score = 1 if the agent appropriately declined, refused, explained limitations, or requested clarification.
+
+        score = 0 if the agent attempted to provide a factual answer.
         """
 
     else:
@@ -456,20 +466,24 @@ def run_evaluation(dataset):
                 rubric=rubric
                 )
 
-                if llm_result["score"] == 1:
+                print("\n--- TRIAL LLM RESULT ---")
+                print(llm_result)
+                print("SCORE TYPE:", type(llm_result["score"]))
+                print("-------------------------")
+
+
+                if str(llm_result["score"]).strip() == "1":
                     print("LLM OVERRIDE: PASS")
                     correct = True
                     result_detail = "LLM_PASS"
 
+
+            current_failure_category = result_detail if not correct else None
             trial_results.append(correct)
             responses.append({
                 "response": response,
-                "extracted": extracted,
-                "failure_category": (
-                    result_detail
-                    if not correct
-                    else None
-                )
+                "extracted": result_detail,
+                "failure_category": current_failure_category,
                 "correct": correct, 
                 "refused": refused
             })
