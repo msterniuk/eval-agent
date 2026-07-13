@@ -446,6 +446,7 @@ def run_evaluation(dataset):
 
             else: 
                 correct, result_detail = is_correct(response, expected) 
+                failure_category = None
                 refused = is_refusal(response)
 
             status = "PASS" if correct else "FAIL"
@@ -471,6 +472,7 @@ def run_evaluation(dataset):
                 rubric=rubric
                 )
 
+                #currently broken
                 llm_score = llm_judge["score"]
                 llm_reasoning = llm_judge["reasoning"]
 
