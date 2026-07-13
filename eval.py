@@ -533,8 +533,8 @@ def run_evaluation(dataset):
                 )
 
                 #currently broken
-                llm_score = llm_judge["score"]
-                llm_reasoning = llm_judge["reasoning"]
+                llm_score = llm_result["score"]
+                llm_reasoning = llm_result["reasoning"]
                 failure_category = result_detail 
 
                 print("\n--- TRIAL LLM RESULT ---")
