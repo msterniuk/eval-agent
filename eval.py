@@ -165,6 +165,25 @@ def is_correct(response: str, expected) -> tuple[bool, str, str]:
     response_norm = normalize(response)
     expected_norm = normalize(str(expected))
 
+    #JSON List Explicit Handling
+    if expected_type == "JSON_LIST":
+
+        if not USE_LLM_JUDGE:
+            return False, None, "JSON_LIST_REQUIRES_LLM"
+
+        llm_result = llm_judge(
+            prompt=response,
+            expected=expected,
+            trials=[{"response": response}],
+            rubric=rubric,
+            evaluation_mode="JSON_LIST"
+        )
+
+        if str(llm_result["score"]).strip() == "1":
+            return True, None, "JSON_LIST_MATCH"
+
+        return False, None, "JSON_LIST_MISMATCH"
+
     # --------------------------------------------------
     # Handle unanswerable / NAN questions
     # --------------------------------------------------
@@ -348,7 +367,39 @@ def llm_judge(prompt, expected, trials, rubric, evaluation_mode = "NORMAL"):
 
         score = 0 if the agent attempted to provide a factual answer.
         """
+        
+    elif evaluation_mode == "JSON_LIST":
 
+        judge_prompt = f"""
+        The expected answer is a JSON list.
+
+        QUESTION:
+        {prompt}
+
+        EXPECTED JSON:
+        {expected}
+
+        AGENT RESPONSE:
+        {trial_text}
+
+        Determine whether the agent response contains the same information,
+        even if:
+
+        - formatting differs
+        - field ordering differs
+        - column names differ slightly
+        - the response is prose rather than JSON
+
+        Return ONLY valid JSON:
+
+        {{
+            "score": 0,
+            "reasoning": ""
+        }}
+
+        score = 1 if the information content matches.
+        score = 0 otherwise.
+        """
     else:
 
         judge_prompt = f"""
