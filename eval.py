@@ -145,7 +145,7 @@ def extract_answer(response: str) -> str:
     return None
 
 
-def is_correct(response: str, expected) -> tuple[bool, str]:
+def is_correct(response: str, expected) -> tuple[bool, str, str]:
     rubric = load_rubric()
     # convert JSON string to dict
     if isinstance(expected, str):
@@ -171,7 +171,7 @@ def is_correct(response: str, expected) -> tuple[bool, str]:
     if expected_type == "NAN_UNANSWERABLE":
 
         if is_valid_unanswerable_response(response):
-            return True, "UNANSWERABLE"
+            return True, None, "UNANSWERABLE"
 
         # ambiguous cases go to LLM
         if USE_LLM_JUDGE:
@@ -188,9 +188,15 @@ def is_correct(response: str, expected) -> tuple[bool, str]:
                 llm_result["score"] is not None and
                 llm_result["score"] == 1
             ): 
-                return True, "LLM_UNANSWERABLE_PASS"
+                return True, None, "LLM_UNANSWERABLE_PASS"
 
-        return False, "HALLUCINATED_ANSWER"
+        hallucinated = extract_answer(response)
+
+        return (
+            False,
+            hallucinated,
+            "HALLUCINATED_ANSWER"
+        )
 
 
     # --------------------------------------------------
@@ -199,22 +205,25 @@ def is_correct(response: str, expected) -> tuple[bool, str]:
     if expected_type != "NAN_UNANSWERABLE":
 
         if contains_failure_message(response):
-            return False, "FAILURE_RESPONSE"
+            return False, None, "FAILURE_RESPONSE"
 
 
     # Step 1: containment
     if expected_norm in response_norm:
-        return True, str(expected)
+        return True, str(expected), None
 
     # Step 2: extraction fallback
     extracted = extract_answer(response)
 
     if extracted is None:
-        return False, "NO_EXTRACTION"
+        return False, None, "NO_EXTRACTION"
 
     extracted_norm = normalize(str(extracted))
 
-    return extracted_norm == expected_norm, extracted
+    if extracted_norm == expected_norm:
+        return True, extracted, None
+
+    return False, extracted, "VALUE_MISMATCH"
 
 def is_refusal(response):
     patterns = [
@@ -445,8 +454,8 @@ def run_evaluation(dataset):
                 refused = False
 
             else: 
-                correct, result_detail = is_correct(response, expected) 
                 failure_category = None
+                correct, result_detail, failure_category = is_correct(response, expected) 
                 refused = is_refusal(response)
 
             status = "PASS" if correct else "FAIL"
@@ -475,6 +484,7 @@ def run_evaluation(dataset):
                 #currently broken
                 llm_score = llm_judge["score"]
                 llm_reasoning = llm_judge["reasoning"]
+                failure_category = result_detail 
 
                 print("\n--- TRIAL LLM RESULT ---")
                 print(llm_result)
@@ -485,16 +495,13 @@ def run_evaluation(dataset):
                 if str(llm_result["score"]).strip() == "1":
                     print("LLM OVERRIDE: PASS")
                     correct = True
-                    result_detail = "LLM_PASS"
                     llm_override = True
-
-
-            current_failure_category = result_detail if not correct else None
+                
             trial_results.append(correct)
             responses.append({
                 "response": response,
                 "extracted": result_detail,
-                "failure_category": current_failure_category,
+                "failure_category": failure_category,
                 "correct": correct, 
                 "refused": refused, 
                 "llm_score" : llm_score, 
