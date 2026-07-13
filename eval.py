@@ -451,6 +451,11 @@ def run_evaluation(dataset):
             status = "PASS" if correct else "FAIL"
             print(f"Q{i} Trial {t + 1}/{N_TRIALS}: {status}")
 
+
+            llm_score = None
+            llm_reasoning = None
+            llm_override = None
+
             if not correct:    
                 print("\n--- FAILURE DEBUG ---")
                 print(f"Q{i} Trial {t+1}")
@@ -466,6 +471,9 @@ def run_evaluation(dataset):
                 rubric=rubric
                 )
 
+                llm_score = llm_judge["score"]
+                llm_reasoning = llm_judge["reasoning"]
+
                 print("\n--- TRIAL LLM RESULT ---")
                 print(llm_result)
                 print("SCORE TYPE:", type(llm_result["score"]))
@@ -476,6 +484,7 @@ def run_evaluation(dataset):
                     print("LLM OVERRIDE: PASS")
                     correct = True
                     result_detail = "LLM_PASS"
+                    llm_override = True
 
 
             current_failure_category = result_detail if not correct else None
@@ -485,7 +494,10 @@ def run_evaluation(dataset):
                 "extracted": result_detail,
                 "failure_category": current_failure_category,
                 "correct": correct, 
-                "refused": refused
+                "refused": refused, 
+                "llm_score" : llm_score, 
+                "llm_reasoning" : llm_reasoning,
+                "llm_override" : llm_override
             })
 
         correct_count = sum(trial_results)
@@ -498,12 +510,26 @@ def run_evaluation(dataset):
         accuracy = correct_count / N_TRIALS
         expected_type = classify_expected(expected)
 
+        question_llm_score = None
+
+        for r in responses:
+            if r["llm_score"] is not None:
+                question_llm_score = r["llm_score"]
+                break
         
-        llm_result = None
+        question_llm_reasoning = None
 
-        if USE_LLM_JUDGE and correct_count < N_TRIALS:
-            llm_result = llm_judge(prompt, expected, responses, rubric)
+        for r in responses:
+            if r["llm_reasoning"] is not None:
+                question_llm_reasoning = r["llm_reasoning"]
+                break
 
+        question_llm_override = False
+
+        for r in responses:
+            if r["llm_override"]:
+                question_llm_override = True
+                break
         
         results.append({
             "id": i,
@@ -515,8 +541,9 @@ def run_evaluation(dataset):
             "expected_type" : expected_type, 
             "refusal_count": refusal_count,
             "failure_categories" : failure_categories, 
-            "llm_score": llm_result["score"] if llm_result else None,
-            "llm_reasoning": llm_result["reasoning"] if llm_result else None
+            "llm_score": question_llm_score,
+            "llm_reasoning": question_llm_reasoning,
+            "llm_override" : llm_override
         })
 
         llm_runs = sum(
