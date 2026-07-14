@@ -1,5 +1,3 @@
-# api.py (TO BE REVIEWED, haven't looked yet)
-
 from pathlib import Path
 import shutil
 
@@ -24,29 +22,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.post("/upload")
+async def upload_dataset(
+    file: UploadFile = File(...)
+):
+
+    # overwrite existing input.xlsx
+    with open("input.xlsx", "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # force dataset regeneration from the newly uploaded file
+    dataset_path = Path("dataset.jsonl")
+
+    if dataset_path.exists():
+        dataset_path.unlink()
+
+    ensure_dataset_exists()
+
+    dataset = load_dataset("dataset.jsonl")
+
+    return {
+        "status": "success",
+        "filename": file.filename,
+    }
+
 
 @app.post("/run-eval")
 async def run_eval(
-    file: UploadFile = File(...),
     num_trials: int = Form(...),
     use_llm_judge: bool = Form(False),
     export_results: bool = Form(True),
 ):
 
     try:
-
-        # overwrite existing input.xlsx
-        with open("input.xlsx", "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        # force dataset regeneration from the newly uploaded file
-        dataset_path = Path("dataset.jsonl")
-
-        if dataset_path.exists():
-            dataset_path.unlink()
-
-        ensure_dataset_exists()
-
         dataset = load_dataset("dataset.jsonl")
 
         results, llm_runs, llm_passes = run_evaluation(
