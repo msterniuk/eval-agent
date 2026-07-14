@@ -9,6 +9,8 @@ export default function App() {
 
   const [isRunningEval, setIsRunningEval] = useState(false);
 
+  const [evalStatus, setEvalStatus] = useState("");
+
   const [evalComplete, setEvalComplete] = useState(false);
 
   const [results, setResults] = useState(null);
@@ -63,25 +65,65 @@ export default function App() {
         );
 
     }
-};
+    };
 
-  const handleRunEval = () => {
-    setIsRunningEval(true);
+  const handleRunEval = async () => {
 
-    setTimeout(() => {
-      setIsRunningEval(false);
-      setEvalComplete(true);
+    try {
 
-      // placeholder data for commit 1
-      setResults({
-        avg_accuracy: 0.42,
-        total_correct: 21,
-        total_questions: 49,
-        llm_runs: 10,
-        llm_passes: 3,
-      });
-    }, 3000);
-  };
+        setIsRunningEval(true);
+
+        setEvalStatus(
+            "Evaluation is running, please wait..."
+        );
+
+        const formData = new FormData();
+
+        formData.append(
+            "num_trials",
+            1
+        );
+
+        formData.append(
+            "use_llm_judge",
+            true
+        );
+
+        formData.append(
+            "export_results",
+            true
+        );
+
+        const response = await fetch(
+            "http://localhost:8000/run-eval",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
+
+        const data = await response.json();
+
+        setResults(data);
+
+        setEvalComplete(true);
+
+        setEvalStatus(
+            "Evaluation complete ✅"
+        );
+
+    } catch (err) {
+
+        setEvalStatus(
+            `Evaluation failed: ${err.message}`
+        );
+
+    } finally {
+
+        setIsRunningEval(false);
+
+    }
+    };
 
   const handleDownload = () => {
     alert("Download placeholder");
@@ -148,11 +190,7 @@ export default function App() {
         {uploadStatus}
       </p>
 
-      {isRunningEval && (
-        <p>
-          Evaluation is running, please wait...
-        </p>
-      )}
+      <p>{evalStatus}</p>
 
       {results && (
         <div
