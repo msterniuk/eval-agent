@@ -126,8 +126,11 @@ export default function App() {
     };
 
   const handleDownload = () => {
-    alert("Download placeholder");
-  };
+    window.open(
+        "http://localhost:8000/download-results",
+        "_blank"
+    );
+    };
 
   return (
     <div style={{ padding: "2rem" }}>
