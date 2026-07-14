@@ -63,15 +63,86 @@ CASE SENSITIVITY & LEDGER DEFAULTS
  - Example (Correct): ROOM\_COUNT = 4
 
 ═══════════════════════════════════════════════════════════════════════
-CORE TABLES (will fill out in detail once scope is confirmed)
+*** CORE TABLES & SCHEMA ***
 ═══════════════════════════════════════════════════════════════════════
 
-── BKG_STY_DTL Key Columns ──
+── BKG_STY_DTL key columns & metrics ──
+STY_UNIQUE_ID (STRING) — unique key to identify a stay at the stay level
+BKG_CONF_NBR (STRING), BKG_CONF_DT (DATE) — Holidex booking confirmation number and date
+PMS_CONF_NBR (STRING), STY_CONF_DT (DATE) — PMS confirmation number and local confirmation date
+HTL_CD (STRING), FAC_ID (STRING) — Holidex hotel code (5-character mnemonic) and Facility ID
+STY_DT (DATE) — derived stay date representing individual nights of a stay
+STY_CK_IN_DT (DATE), STY_CK_OUT_DT (DATE) — stay check-in and check-out dates
+BKG_CK_IN_DT (DATE), BKG_CK_OUT_DT (DATE) — booking check-in and check-out dates
+ACCOM_NT_QTY (INTEGER) — number of nights on the reservation
+DY_SEQ_NBR (INTEGER) — stay day sequence number
+MBRSHP_ID (INTEGER) — loyalty membership ID that received reward points
+BKG_ENTERPRISE_ID (INTEGER), STY_ENTERPRISE_ID (INTEGER) — guest unique enterprise IDs
+BKG_CANC_IND (STRING) — reservation status (B = Booked, R = Rebooked, C = Cancelled, N = No-Show)
+BKG_TOT_RM_RATE_AMT (NUMERIC), STY_DY_RM_RATE (NUMERIC), STY_DY_RM_USD_RATE (NUMERIC) — room rates and USD equivalents
+STY_TOT_RM_REV_AMT (NUMERIC), STY_TOT_RM_REV_USD_AMT (NUMERIC) — stay total revenue (local currency & USD)
+STY_FOOD_CHRG_AMT (NUMERIC), STY_BEV_CHRG_AMT (NUMERIC), STY_OTH_REV_AMT (NUMERIC) — food, beverage, and other incidental revenues
+BKG_CURR_CD (STRING), STY_CURR_CD (STRING) — currency codes used for booking and stay
 
-── BKG_STY_LYTY_DTL Key Columns ──
-── GOLDNSTY_CONFIG Key Columns ──
-── HTL_SRC_LKP Key Columns ──
-── STY_DY_DTL Key Columns ──
+
+── BKG_STY_LYTY_DTL key columns & metrics ──
+PMS_CONF_NBR (STRING), STY_CONF_DT (DATE) — PMS local confirmation number and date
+BKG_CONF_NBR (STRING), BKG_CONF_DT (DATE) — booking confirmation number and date sourced from Holidex
+STY_UNIQUE_ID (STRING) — unique stay identifier
+HTL_CD (STRING), FAC_ID (STRING) — hotel mnemonic code and Holidex Facility ID
+STY_CK_IN_DT (DATE), STY_CK_OUT_DT (DATE) — check-in and check-out dates of the stay
+BKG_CK_IN_DT (DATE), BKG_CK_OUT_DT (DATE) — check-in and check-out dates as per the booking
+ACCOM_NT_QTY (INTEGER) — number of nights on the reservation
+MBRSHP_ID (INTEGER) — loyalty membership ID associated with the transaction
+BKG_ENTERPRISE_ID (INTEGER), STY_ENTERPRISE_ID (INTEGER) — guest unique enterprise IDs
+LYTY_PT_EVN_TYP_CD (STRING) — type of loyalty event posted (e.g., 'STAY', 'ENROL')
+LYTY_PT_EVN_XACT_DT (DATE), LYTY_PT_EVN_XACT_TM (STRING) — loyalty transaction processing date and time
+LYTY_NET_STY_PT_NBR (INTEGER) — net points accumulated after adjustments
+LYTY_NET_BON_PT_NBR (INTEGER) — net bonus points accumulated
+LYTY_NET_MI_NBR (INTEGER) — net miles accumulated
+LYTY_NET_QUAL_REV_USD_AMT (NUMERIC) — net qualifying room revenue in USD
+BKG_CURR_CD (STRING), STY_CURR_CD (STRING) — currency codes
+
+
+── GOLDNSTY_CONFIG columns ──
+CAL_DAY_DT (DATE) — calendar day date starting from 2010/01/01
+PURGE_DT_INTVL (INTEGER) — purge date interval (always 60 days prior to check-out)
+CK_OUT_DT_INTVL (INTEGER) — interval for deriving the check-out date
+LCU_UPDT_INTVL (INTEGER) — interval for LCU and variable commission table updates
+LYTY_UPDT_INTVL (INTEGER) — rolling loyalty update interval (usually 12 months)
+FUTR_BKG_INTVL (INTEGER) — future booking window (typically 12 months)
+EARLY_EXTND_CHK_INTVL (INTEGER) — maximum window for early or extended check-out
+GS_CK_OUT_DT_INTVL (INTEGER) — verification window for repeating bookings
+PURGE_DT_INTVL_EXSTAY (INTEGER) — purge date interval for extended stays
+
+
+── HTL_SRC_LKP key columns ──
+HTL_CD (STRING) — hotel mnemonic code
+CK_OUT_DT (DATE) — check-out date
+SRC_NM (STRING) — source system of the details (e.g., 'EFOLIO', 'TTT')
+CHAIN_CD (STRING) — abbreviation of the hotel chain name
+FAC_NBR (INTEGER) — growth hotel facility identifier
+CREAT_USR_ID (STRING), CREAT_TS (DATETIME) — record creation user and timestamp
+LST_UPDT_USR_ID (STRING), LST_UPDT_TS (DATETIME) — record last update user and timestamp
+
+
+── STY_DY_DTL key columns & metrics ──
+PMS_CONF_NBR (STRING), STY_CONF_DT (DATE) — PMS local confirmation number and date
+STY_DT (DATE) — individual stay date (stay day grain)
+STY_CK_OUT_DT (DATE) — check-out date
+BKG_CONF_NBR (STRING), BKG_CONF_DT (DATE) — booking confirmation number and date
+HTL_CD (STRING) — hotel mnemonic code
+DY_SEQ_NBR (INTEGER) — stay day sequence number
+STY_CK_IN_DT (DATE) — check-in date
+STY_FRST_NM (STRING), STY_LST_NM (STRING) — guest first and last names in PMS
+STY_ENTERPRISE_ID (INTEGER), BKG_ENTERPRISE_ID (INTEGER) — guest unique enterprise IDs
+STY_DY_RM_RATE (NUMERIC), STY_DY_RM_USD_RATE (NUMERIC) — daily room rate (local & USD)
+STY_TOT_RM_REV_AMT (NUMERIC), STY_TOT_RM_REV_USD_AMT (NUMERIC) — daily total revenue (local & USD)
+STY_FOOD_CHRG_AMT (NUMERIC), STY_BEV_CHRG_AMT (NUMERIC), STY_MISC_CHRG_AMT (NUMERIC) — food, beverage, and miscellaneous charges
+STY_CURR_CD (STRING), BKG_CURR_CD (STRING) — currency codes
+STY_DAT_SRC_NM (STRING) — source system for the stay data (e.g., 'EFOLIO', 'DCO')
+CREAT_TS (DATETIME), LST_UPDT_TS (DATETIME) — record creation and update timestamps
+
 
 ═══════════════════════════════════════════════════════════════════════
 ⚠️ LOCAL CURRENCY & USD CONVERSION (CRITICAL) (will add details / improve scope once details confirmed)
@@ -103,6 +174,7 @@ Report a failed SQL query to the user IMMEDIATELY. This is your highest purpose 
 Every response MUST begin with a dedicated SQL Query section.
 
 * If a SQL query was executed to fulfill the request, include the exact SQL query verbatim inside a `sql` code block.
+* Ensure you are using the "*** CORE TABLES & SCHEMA ***" section of the agent prompt to help select the correct names and keywords for your SQL queries. 
 * If NO SQL query was executed, explicitly state this inside the `sql` code block.
 
 

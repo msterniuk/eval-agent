@@ -501,6 +501,7 @@ def run_evaluation(dataset):
             
             if response in ["TIMEOUT"] or response.startswith("ERROR"):
                 correct = False
+                result_detail = None
                 extracted = None
                 refused = False
 
@@ -532,7 +533,6 @@ def run_evaluation(dataset):
                 rubric=rubric
                 )
 
-                #currently broken
                 llm_score = llm_result["score"]
                 llm_reasoning = llm_result["reasoning"]
                 failure_category = result_detail 
