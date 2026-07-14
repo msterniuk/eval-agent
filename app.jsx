@@ -3,6 +3,8 @@ import { useState } from "react";
 export default function App() {
   const [selectedFile, setSelectedFile] = useState(null);
 
+  const [uploadStatus, setUploadStatus] = useState("");
+
   const [isUploaded, setIsUploaded] = useState(false);
 
   const [isRunningEval, setIsRunningEval] = useState(false);
@@ -11,9 +13,57 @@ export default function App() {
 
   const [results, setResults] = useState(null);
 
-  const handleUpload = () => {
-    setIsUploaded(true);
-  };
+  const handleUpload = async () => {
+
+    if (!selectedFile) {
+        return;
+    }
+
+    try {
+
+        setUploadStatus("Uploading dataset...");
+
+        const formData = new FormData();
+
+        formData.append(
+            "file",
+            selectedFile
+        );
+
+        const response = await fetch(
+            "http://localhost:8000/upload",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
+
+        const data = await response.json();
+
+        if (data.status === "success") {
+
+            setIsUploaded(true);
+
+            setUploadStatus(
+                `Upload successful: ${data.filename}`
+            );
+
+        } else {
+
+            setUploadStatus(
+                `Upload failed: ${data.message}`
+            );
+
+        }
+
+    } catch (err) {
+
+        setUploadStatus(
+            `Upload failed: ${err.message}`
+        );
+
+    }
+};
 
   const handleRunEval = () => {
     setIsRunningEval(true);
@@ -93,6 +143,9 @@ export default function App() {
       <p>
         Upload Status:{" "}
         {isUploaded ? "Uploaded ✅" : "Not Uploaded"}
+      </p>
+      <p>
+        {uploadStatus}
       </p>
 
       {isRunningEval && (
