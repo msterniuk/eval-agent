@@ -561,6 +561,9 @@ def run_evaluation(
                 
             trial_results.append(correct)
             responses.append({
+                "run_id": run_id,
+                "question_id" : i,
+                "trial_id" : t + 1, 
                 "response": response,
                 "extracted": result_detail,
                 "failure_category": failure_category,
