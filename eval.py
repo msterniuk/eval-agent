@@ -664,14 +664,15 @@ def print_debug_details(results, print_all_debug = True):
 #runs the evaluation + guards against import runs
 if __name__ == "__main__":
 
-    #ensure that global variables are mapped correctly
-    num_trials = N_TRIALS
-    use_llm_judge = USE_LLM_JUDGE
-    export_results = EXPORT_RESULTS
-
     ensure_dataset_exists()
     dataset = load_dataset("dataset.jsonl")
-    results, llm_runs, llm_passes = run_evaluation(dataset)
+    results, llm_runs, llm_passes = run_evaluation(
+        dataset,
+        num_trials=N_TRIALS,
+        use_llm_judge=USE_LLM_JUDGE,
+        export_results=EXPORT_RESULTS,
+        print_all_debug=PRINT_ALL_DEBUG,
+    )
 
     total_correct = sum(r["correct_count"] for r in results)    
     total_refusals = sum(r["refusal_count"] for r in results)
