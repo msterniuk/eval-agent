@@ -477,7 +477,12 @@ def llm_judge(prompt, expected, trials, rubric, evaluation_mode = "NORMAL"):
 
 
 #main evaluation loop 
-def run_evaluation(dataset):
+def run_evaluation(
+        dataset,
+        num_trials = 1, 
+        use_llm_judge = False, 
+        export_results = True
+        ):
     results = []
     rubric = load_rubric()
 
@@ -488,7 +493,7 @@ def run_evaluation(dataset):
         trial_results = []
         responses = []
 
-        for t in range(N_TRIALS):
+        for t in range(num_trials):
             runner, user_id, session_id = asyncio.run(
                 create_runner(use_agent_engine=False)
             )
@@ -511,7 +516,7 @@ def run_evaluation(dataset):
                 refused = is_refusal(response)
 
             status = "PASS" if correct else "FAIL"
-            print(f"Q{i} Trial {t + 1}/{N_TRIALS}: {status}")
+            print(f"Q{i} Trial {t + 1}/{num_trials}: {status}")
 
 
             llm_score = None
@@ -656,6 +661,11 @@ def print_debug_details(results, print_all_debug = True):
 
 #runs the evaluation + guards against import runs
 if __name__ == "__main__":
+
+    #ensure that global variables are mapped correctly
+    num_trials = N_TRIALS
+    use_llm_judge = USE_LLM_JUDGE
+    export_results = EXPORT_RESULTS
 
     ensure_dataset_exists()
     dataset = load_dataset("dataset.jsonl")
