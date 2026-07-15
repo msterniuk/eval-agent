@@ -5,6 +5,7 @@ import re
 import os
 import pandas as pd
 import csv
+from datetime import datetime
 from pathlib import Path
 import config
 from session_runner import create_runner, chat
@@ -491,6 +492,7 @@ def run_evaluation(
     for i, case in enumerate(dataset, start=1):
         prompt = case["prompt"]
         expected = case["expected_value"]
+        question_start = datetime.now()
 
         trial_results = []
         responses = []
@@ -598,6 +600,11 @@ def run_evaluation(
                 question_llm_override = True
                 break
         
+        question_end = datetime.now() 
+        duration_in_seconds = (
+        question_end - question_start
+        ).total_seconds()
+        
         results.append({
             "id": i,
             "prompt": prompt,
@@ -610,7 +617,10 @@ def run_evaluation(
             "failure_categories" : failure_categories, 
             "llm_score": question_llm_score,
             "llm_reasoning": question_llm_reasoning,
-            "llm_override" : llm_override
+            "llm_override" : llm_override,
+            "question_start": question_start.isoformat(),
+            "question_end": question_end.isoformat(),
+            "duration_seconds": duration_in_seconds,
         })
 
         llm_runs = sum(
