@@ -15,6 +15,7 @@ N_TRIALS = 1
 USE_LLM_JUDGE = True
 EXPORT_RESULTS = True
 PRINT_ALL_DEBUG = True
+
 #import and set up llm as a judge model 
 vertexai.init(
     project = config.PROJECT_ID, 
@@ -481,7 +482,8 @@ def run_evaluation(
         dataset,
         num_trials = 1, 
         use_llm_judge = False, 
-        export_results = True
+        export_results = True,
+        print_all_debug = True
         ):
     results = []
     rubric = load_rubric()
@@ -502,7 +504,7 @@ def run_evaluation(
                 safe_chat(runner, user_id, session_id, prompt)
             )
             
-            print_debug_details(results)
+            print_debug_details(results, print_all_debug)
             
             if response in ["TIMEOUT"] or response.startswith("ERROR"):
                 correct = False
