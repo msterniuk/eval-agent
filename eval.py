@@ -5,6 +5,7 @@ import re
 import os
 import pandas as pd
 import csv
+from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
 import config
@@ -488,6 +489,7 @@ def run_evaluation(
         ):
     results = []
     rubric = load_rubric()
+    run_id = str(uuid4())
 
     for i, case in enumerate(dataset, start=1):
         prompt = case["prompt"]
@@ -606,6 +608,7 @@ def run_evaluation(
         ).total_seconds()
         
         results.append({
+            "run_id": run_id,
             "id": i,
             "prompt": prompt,
             "expected": expected,
