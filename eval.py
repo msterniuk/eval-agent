@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 import config
 from session_runner import create_runner, chat
+from google.cloud import bigquery
 import vertexai 
 from vertexai.generative_models import GenerativeModel
 
@@ -101,6 +102,18 @@ FAILURE_PATTERNS = [
     "timed out",
 ]
 
+#should eventually become a config level var ( save in env or surface through config.py)
+question_level_grain_source_table = (
+        "ca-sbox-es-science-444."
+        "metadata_uc."
+        "evaluation_question_level"
+)
+
+trial_level_grain_source_table = (
+    "ca-sbox-es-science-444."
+    "metadata_uc."
+    "evaluation_trial_level"
+)
 
 def is_valid_unanswerable_response(response: str) -> bool:
     response = response.lower()
@@ -303,6 +316,114 @@ def export_results_to_csv(results, output_file="evaluation_results.csv"):
         writer.writerows(results)
 
     print(f"Results exported to {Path(output_file).resolve()}")
+
+
+#this exports "results", aka the question level responses. trial level has a seperate export func
+def export_question_level_to_bigquery(results):
+
+    client = bigquery.Client()
+
+    rows = []
+
+    for r in results:
+
+        rows.append({
+
+            "run_id": r["run_id"],
+            "question_id": r["question_id"],
+
+            "prompt": r["prompt"],
+            "expected": str(r["expected"]),
+            "expected_type": r["expected_type"],
+
+            "correct_count": r["correct_count"],
+            "accuracy": r["accuracy"],
+
+            "refusal_count": r["refusal_count"],
+
+            "failure_categories": r["failure_categories"],
+
+            "llm_score": r["llm_score"],
+            "llm_reasoning": r["llm_reasoning"],
+            "llm_override": r["llm_override"],
+
+            "question_start": r["question_start"],
+            "question_end": r["question_end"],
+            "duration_seconds": r["duration_seconds"],
+
+            "created_at": r["question_end"]
+        })
+
+    errors = client.insert_rows_json(
+        question_level_grain_source_table,
+        rows
+    )
+
+    if errors:
+        print(errors)
+    else:
+        print(
+            f"Successfully inserted {len(rows)} question rows"
+        )
+
+
+
+#this exports the trial level results
+def export_trial_level_to_bigquery(results):
+
+    client = bigquery.Client()
+
+    rows = []
+
+    for question in results:
+
+        for trial in question["trials"]:
+
+            rows.append({
+
+                "run_id": trial["run_id"],
+                "question_id": trial["question_id"],
+                "trial_id": trial["trial_id"],
+
+                "correct": trial["correct"],
+
+                "extracted": trial["extracted"],
+                "failure_category": trial["failure_category"],
+
+                "response": trial["response"],
+
+                "refused": trial["refused"],
+
+                "llm_score": trial["llm_score"],
+                "llm_reasoning": trial["llm_reasoning"],
+                "llm_override": trial["llm_override"],
+
+                # reuse question timestamp for partitioning
+                "created_at": question["question_end"]
+            })
+
+    errors = client.insert_rows_json(
+        trial_level_grain_source_table,
+        rows
+    )
+
+    if errors:
+        print("Trial table errors:")
+        print(errors)
+
+    else:
+        print(
+            f"Successfully inserted {len(rows)} trial rows"
+        )
+
+
+#just a wrapper that calls utilities to export results, responses into the two associated tables
+def export_results_to_bigquery(results):
+
+    export_question_level_to_bigquery(results)
+
+    export_trial_level_to_bigquery(results)
+
 
 def ensure_dataset_exists():
     if not os.path.exists("dataset.jsonl"):
@@ -612,7 +733,7 @@ def run_evaluation(
         
         results.append({
             "run_id": run_id,
-            "id": i,
+            "question_id": i,
             "prompt": prompt,
             "expected": expected,
             "correct_count": correct_count,
@@ -716,6 +837,7 @@ if __name__ == "__main__":
     #toggle whether to save results to csv or not 
     if EXPORT_RESULTS:
         export_results_to_csv(results)
+        export_results_to_bigquery(results)
 
 
 
