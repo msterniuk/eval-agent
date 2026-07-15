@@ -1,3 +1,10 @@
+#add toggle to include debug_details() 
+#add timestamping to prompt time / response time (performance analytics)
+#integration (outstanding)
+#look into writing every single output csv into a bigquery table
+#ensure you are saving every single run to see historical runs
+
+
 from pathlib import Path
 import shutil
 
@@ -62,6 +69,7 @@ async def run_eval(
             num_trials=num_trials,
             use_llm_judge=use_llm_judge,
             export_results=export_results,
+            #add toggle to include all debug_details() info
         )
 
         # mimic current __main__ behavior
