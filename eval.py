@@ -14,7 +14,7 @@ from vertexai.generative_models import GenerativeModel
 N_TRIALS = 1
 USE_LLM_JUDGE = True
 EXPORT_RESULTS = True
-
+PRINT_ALL_DEBUG = True
 #import and set up llm as a judge model 
 vertexai.init(
     project = config.PROJECT_ID, 
@@ -623,37 +623,35 @@ def run_evaluation(dataset):
 
 
 
-def print_debug_details(results):
+def print_debug_details(results, print_all_debug = True):
     print("\n--- DEBUG BREAKDOWN ---")
 
     for r in results:
-        if r["accuracy"] < 1:
-            print(f"\n--- Q{r['id']} FAILED ({r['correct_count']}/{N_TRIALS}) ---")
-            print(f"Prompt: {r['prompt']}")
-            print(f"Expected: {r['expected']}")
-            print("Failure Categories:")
-            print(r["failure_categories"])
 
+        if (not print_all_debug and r["correct_count"] == N_TRIALS):
+            continue
 
-            for i, trial in enumerate(r["trials"], start=1):
-                status = "✅" if trial["correct"] else "❌"
-                print(f"\n--- Trial {i}: {status} ---")
-                print("--- What Was Extracted: ---\n", trial["extracted"])
-                print("--- The Full Response: ---\n")
-                print(trial["response"])
+        print(f"\n--- Q{r['id']} SCORED ({r['correct_count']}/{N_TRIALS}) ---")
+        print(f"Current Prompt: {r['prompt']}")
+        print(f"Expected Response: {r['expected']}")
+        print(f"Expected Type: {r['expected_type']}")
+        print(f"Failure Categories: {r["failure_categories"]}")
 
-            
-            if r["llm_score"] is not None:
-                    print("\n--- LLM JUDGE ---")
-                    print("Score:", r["llm_score"])
-                    print("Reasoning:", r["llm_reasoning"])
+        for i, trial in enumerate(r["trials"], start=1):
+            status = "✅" if trial["correct"] else "❌"
+            print(f"LLM Override: {trial['llm_override']}")
+            print(f"\n--- Trial {i}: {status} ---")
+            print("--- Extracted Value Used For Scoring: ---\n", trial["extracted"])
+            print(
+                "--- Failure Category: ---\n",
+                trial["failure_category"]
+            )
+            print("--- The Full Response: ---\n", trial["response"])
 
-                    deterministic_pass = r["correct_count"] == N_TRIALS
-                    if deterministic_pass != bool(r["llm_score"]):
-                        print("⚠️ DISAGREEMENT BETWEEN RULES AND LLM")
-
-
-
+            if trial["llm_score"] is not None:
+                print("--- Trial LLM Judge ---")
+                print("Score:", trial["llm_score"])
+                print("Reasoning:", trial["llm_reasoning"])
 
 
 #runs the evaluation + guards against import runs
