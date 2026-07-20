@@ -37,6 +37,8 @@ async def create_runner(
     """
     if use_agent_engine:
         resource = agent_engine_resource or config.AGENT_ENGINE_RESOURCE
+        print("Using deployed agent")
+        print(f"Agent resource: {resource}")
         if not resource:
             raise ValueError(
                 "AGENT_ENGINE_RESOURCE is not set. Run deploy.py first, "
@@ -87,8 +89,10 @@ async def chat(runner: Runner, user_id: str, session_id: str, message: str) -> s
 
 async def main():
     # Always run locally with InMemorySessionService for local testing
-    print("Initializing golden stays agent for local testing...")
-    runner, user_id, session_id = await create_runner(use_agent_engine=False)
+    print("Initializing golden stays agent for testing...")
+    runner, user_id, session_id = await create_runner(
+        use_agent_engine=True, 
+        agent_engine_resource=config.AGENT_ENGINE_RESOURCE)
     print(f"✓ Agent ready [local]. (user_id={user_id}, session_id={session_id})")
     print("\nExample queries:")
     print("  - 'Find all the stays associated with a given Booking Conference Number.'")
@@ -110,7 +114,7 @@ async def main():
             continue
         response = await chat(runner, user_id, session_id, user_input)
         print(f"Agent: {response}\n")
-
+    
 
 if __name__ == "__main__":
     asyncio.run(main())

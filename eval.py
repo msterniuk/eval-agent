@@ -18,6 +18,7 @@ N_TRIALS = 1
 USE_LLM_JUDGE = True
 EXPORT_RESULTS = True
 PRINT_ALL_DEBUG = True
+USE_AGENT_ENGINE = True
 
 #import and set up llm as a judge model 
 vertexai.init(
@@ -622,7 +623,8 @@ def run_evaluation(
 
         for t in range(num_trials):
             runner, user_id, session_id = asyncio.run(
-                create_runner(use_agent_engine=False)
+                create_runner(use_agent_engine=USE_AGENT_ENGINE,
+                              agent_engine_resource=config.AGENT_ENGINE_RESOURCE)
             )
 
             response = asyncio.run(
