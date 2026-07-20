@@ -104,14 +104,14 @@ FAILURE_PATTERNS = [
 
 #should eventually become a config level var ( save in env or surface through config.py)
 question_level_grain_source_table = (
-        "ca-sbox-es-science-444."
-        "metadata_uc."
+        "ca-sbox-es-aiml-demo-444."
+        "demo."
         "evaluation_question_level"
 )
 
 trial_level_grain_source_table = (
-    "ca-sbox-es-science-444."
-    "metadata_uc."
+    "ca-sbox-es-aiml-demo-444."
+    "demo."
     "evaluation_trial_level"
 )
 
@@ -775,7 +775,7 @@ def print_debug_details(results, print_all_debug = True):
         if (not print_all_debug and r["correct_count"] == N_TRIALS):
             continue
 
-        print(f"\n--- Q{r['id']} SCORED ({r['correct_count']}/{N_TRIALS}) ---")
+        print(f"\n--- Q{r['question_id']} SCORED ({r['correct_count']}/{N_TRIALS}) ---")
         print(f"Current Prompt: {r['prompt']}")
         print(f"Expected Response: {r['expected']}")
         print(f"Expected Type: {r['expected_type']}")
