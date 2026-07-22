@@ -281,9 +281,11 @@ def is_correct(response: str, expected) -> tuple[bool, str, str]:
     # --------------------------------------------------
     if expected_type == "NAN_UNANSWERABLE":
 
-        if is_valid_unanswerable_response(response):
-            return True, None, "UNANSWERABLE"
+        refused = is_valid_unanswerable_response(response)
 
+        if refused:
+            return True, None, "UNANSWERABLE"
+            
         # ambiguous cases go to LLM
         if USE_LLM_JUDGE:
 
@@ -291,14 +293,16 @@ def is_correct(response: str, expected) -> tuple[bool, str, str]:
                 "Determine whether the agent correctly refused to answer.",
                 "UNANSWERABLE",
                 [{"response": response}],
-                rubric, 
-                evaluation_mode = "UNANSWERABLE"
+                rubric,
+                evaluation_mode="UNANSWERABLE"
             )
 
-            if (
-                llm_result["score"] is not None and
-                llm_result["score"] == 1
-            ): 
+            print(
+                f"NAN DEBUG | refused={refused} | "
+                f"llm_score={llm_result.get('score')}"
+            )
+
+            if llm_result.get("score") == 1:
                 return True, None, "LLM_UNANSWERABLE_PASS"
 
         hallucinated = extract_answer(response)

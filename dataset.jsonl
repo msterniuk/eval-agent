@@ -3,3 +3,8 @@
 {"prompt": "Find the average check-in rate () for bookings cancelled with a penalty indicator set to 'Y' in the brand 'CP'.", "expected_value": "{\"avg_cancelled_rate\": 2252.026300717}"}
 {"prompt": "What is the highest daily room rate in USD () recorded in the day-level details for check-outs on '2020-08-09'?", "expected_value": "{\"max_daily_rate\": 17577}"}
 {"prompt": "Calculate the total beverage charge () for stays that checked in between '2020-08-01' and '2020-08-15' at hotel 'CHIEL'.", "expected_value": "{\"total_bev_charge\": 0}"}
+{"prompt": "How many distinct loyalty memberships () received points from stays at brand 'HI' during 2020?", "expected_value": "{\"count_mbrshp\": 3192204}"}
+{"prompt": "List the top 5 room types () by total room revenue () for completed bookings.", "expected_value": "[{\"RM_TYP_CD\":\"PM\",\"total_rev\":26388087395.58},{\"RM_TYP_CD\":\"OQNN\",\"total_rev\":25450751748.22},{\"RM_TYP_CD\":\"KNGN\",\"total_rev\":12620324399.62},{\"RM_TYP_CD\":\"TQNN\",\"total_rev\":11780767683.55},{\"RM_TYP_CD\":\"TTWN\",\"total_rev\":9762277074.1}]"}
+{"prompt": "What is the total number of nights () booked where the sell channel code was 'WEB' in the last quarter of 2025?", "expected_value": "{\"sum_accom_nt_qty\": 23450630}"}
+{"prompt": "Find the maximum penalty amount () charged for cancelled stays in 2025.", "expected_value": "{\"max_bkg_pnlty_amt\": null}"}
+{"prompt": "How many bookings have a difference between check-in date () and confirmation date () of more than 30 days?", "expected_value": "{\"count\": 689935923}"}
