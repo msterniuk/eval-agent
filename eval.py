@@ -523,7 +523,48 @@ async def safe_chat(runner, user_id, session_id, prompt):
         return "TIMEOUT"
     except Exception as e:
         return f"ERROR: {str(e)}"
+    
+def parse_llm_judge_response(raw: str) -> dict:
+    raw = raw.strip()
 
+    # Remove markdown fences
+    raw = re.sub(
+        r"^```(?:json)?\s*",
+        "",
+        raw,
+        flags=re.IGNORECASE
+    )
+
+    raw = re.sub(
+        r"\s*```\s*$",
+        "",
+        raw
+    )
+
+    # Try direct JSON parse
+    try:
+        return json.loads(raw)
+
+    except json.JSONDecodeError:
+        pass
+
+    # Fallback: find first JSON object in surrounding text
+    match = re.search(
+        r"\{.*\}",
+        raw,
+        flags=re.DOTALL
+    )
+
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            pass
+
+    return {
+        "score": None,
+        "reasoning": f"Failed to parse LLM judge response: {raw[:1000]}"
+    }
 
 def llm_judge(prompt, expected, trials, rubric, evaluation_mode = "NORMAL"):
 
@@ -668,11 +709,20 @@ def llm_judge(prompt, expected, trials, rubric, evaluation_mode = "NORMAL"):
         }
 
     try:
-        return json.loads(response.text)
-    except Exception:
+        parsed = parse_llm_judge_response(response.text)
+
+        print("\n--- RAW LLM RESPONSE ---")
+        print(response.text)
+
+        print("\n--- PARSED LLM RESPONSE ---")
+        print(parsed)
+
+        return parsed
+
+    except Exception as e:
         return {
             "score": None,
-            "reasoning": response.text
+            "reasoning": f"Failed while processing judge result with error {e}"
         }
 
 
