@@ -85,6 +85,16 @@ UNANSWERABLE_PATTERNS = [
     "requires clarification",
     "needs clarification",
     "ambiguous request",
+    "cannot fulfill this request",
+    "unable to fulfill this request",
+    "please clarify",
+    "could you please specify",
+    "need more information",
+    "i need to know",
+    "which metric",
+    "what metric",
+    "do not contain information",
+    "does not contain information"
 ]
 
 FAILURE_PATTERNS = [
@@ -119,10 +129,37 @@ trial_level_grain_source_table = (
 def is_valid_unanswerable_response(response: str) -> bool:
     response = response.lower()
 
-    return any(
+    if any(
         pattern in response
         for pattern in UNANSWERABLE_PATTERNS
+    ):
+        return True
+
+    clarification_phrases = [
+        "please clarify",
+        "could you please specify",
+        "which metric",
+        "what metric",
+        "which type",
+        "need more information",
+        "need additional information",
+        "i need to know",
+        "i need more information",
+        "cannot fulfill this request",
+        "unable to fulfill this request",
+        "do not contain information",
+        "does not contain information",
+        "do not contain data",
+        "does not contain data",
+        "not available in the available tables",
+        "not available in the provided schema",
+    ]
+
+    return any(
+        phrase in response
+        for phrase in clarification_phrases
     )
+
 
 def contains_failure_message(response: str) -> bool:
     response = response.lower()
