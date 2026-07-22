@@ -132,26 +132,64 @@ def contains_failure_message(response: str) -> bool:
         for pattern in FAILURE_PATTERNS
     )
 
+def clean_response_for_extraction(response: str):
+
+    response = re.sub( #removes the prompt version so the regex doesn't get confused
+        r"PROMPT_VERSION:.*",
+        "",
+        response,
+        flags=re.IGNORECASE
+    )
+
+    response = re.sub(
+        r"\[\d+\]",
+        "",
+        response
+    )
+
+    response = re.sub( #removes the dataset name
+        r"prd-\d+",
+        "",
+        response,
+        flags=re.IGNORECASE
+    )
+
+    return response
+
+def isolate_results_section(response):
+
+    match = re.search(
+        r"Results(.*?)(Explanation|Follow-Up|$)",
+        response,
+        re.IGNORECASE | re.DOTALL
+    )
+
+    if match:
+        return match.group(1)
+
+    return response
+
 def extract_answer(response: str) -> str:
 
+    response = clean_response_for_extraction(response)
+    response = isolate_results_section(response)
+
     patterns = [
-        # "The associated f0_ is 17577."
-        r"associated\s+f0_\s+is\s+([\d,\.]+)",
 
-        # "total_revenue = 12345"
-        r"[A-Za-z0-9_]+\s*=\s*([\d,\.]+)",
+    # JSON output
+    r'"\w+"\s*:\s*([\d,\.]+)',
 
-        # "The answer is 17577"
-        r"answer\s+is\s+([\d,\.]+)",
+    # f0_
+    r"associated\s+f0_\s+is\s+([\d,\.]+)",
 
-        # "is 17577"
-        r"\bis\s+([\d,\.]+)",
+    # named metric
+    r"associated\s+[A-Za-z0-9_]+\s+is\s+([\d,\.]+)",
 
-        # JSON-style output
-        r'"\w+"\s*:\s*([\d,\.]+)',
+    # answer is
+    r"answer\s+is\s+([\d,\.]+)",
 
-        # standalone large number
-        r"\b(\d+(?:\.\d+)?)\b"
+    # key = value
+    r"[A-Za-z0-9_]+\s*=\s*([\d,\.]+)",
     ]
 
     for pattern in patterns:
@@ -657,7 +695,7 @@ def run_evaluation(
                 print(f"Q{i} Trial {t+1}")
                 print(f"Expected : {expected}")
                 print(f"Extracted: {result_detail}")
-                print(f"Response : {response[:500]}")
+                print(f"Response : {response[:1000]}")
                 print("---------------------\n")
 
                 llm_result = llm_judge(
