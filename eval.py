@@ -377,7 +377,8 @@ def load_rubric(path="rubric.txt"):
     with open(path, "r") as f:
         return f.read()
 
-
+#loads the dataset that is stored locally. once again, if someone wishes can easily
+#extend this to a cloud hosted dataset.jsonl or other question set 
 def load_dataset(path="dataset.jsonl"):
     dataset = []
     with open(path, "r") as f:
@@ -385,6 +386,9 @@ def load_dataset(path="dataset.jsonl"):
             dataset.append(json.loads(line))
     return dataset
 
+
+#in the case of the dataset not already being loaded, this will take user input Excel
+#and turn it into a jsonl that the evaluation suite can process
 def convert_excel_to_jsonl(input_path="input.xlsx", output_path="dataset.jsonl"):
     df = pd.read_excel(input_path, engine="openpyxl")
     df = df.astype(str)  # ensure consistency
@@ -396,6 +400,7 @@ def convert_excel_to_jsonl(input_path="input.xlsx", output_path="dataset.jsonl")
     print(f"✅ Converted {input_path} → {output_path}")
 
 
+#LEGACY: can be useful for debugging. default mode now exports to bigQuery tables
 def export_results_to_csv(results, output_file="evaluation_results.csv"):
     """
     Export evaluation results to CSV.
@@ -516,6 +521,7 @@ def export_trial_level_to_bigquery(results):
 
 
 #just a wrapper that calls utilities to export results, responses into the two associated tables
+#table details / routing currently stored as GLOBAL variables. eventually migrate to config.py or .env
 def export_results_to_bigquery(results):
 
     export_question_level_to_bigquery(results)
@@ -523,6 +529,7 @@ def export_results_to_bigquery(results):
     export_trial_level_to_bigquery(results)
 
 
+#load logic that determines whether to include existing or load excel file
 def ensure_dataset_exists():
     if not os.path.exists("dataset.jsonl"):
         print("dataset.jsonl not found — generating from Excel...")
@@ -535,6 +542,8 @@ def ensure_dataset_exists():
         print("✅ dataset.jsonl already exists — skipping conversion")
 
 
+#wrapper around the chat() function in session_runner.py to ensure
+#that single agent TIMEOUT / error doesn't derail entire evaluation process
 async def safe_chat(runner, user_id, session_id, prompt):
     try:
         return await asyncio.wait_for(
@@ -545,7 +554,11 @@ async def safe_chat(runner, user_id, session_id, prompt):
         return "TIMEOUT"
     except Exception as e:
         return f"ERROR: {str(e)}"
+
     
+#HIGHLY TAILORED TO GOLDEN STAYS AGENT -> if you'd like to test agents with 
+#different agent formats, generalize this into an LLM as a judge function 
+#should be quite simple to do, see llm_judge() function for example / evaluation modes
 def parse_llm_judge_response(raw: str) -> dict:
     raw = raw.strip()
 
@@ -588,6 +601,9 @@ def parse_llm_judge_response(raw: str) -> dict:
         "reasoning": f"Failed to parse LLM judge response: {raw[:1000]}"
     }
 
+
+#core LLM as a Judge function with configurable evaluation mode
+#to extend with a new evaluation mode, simply add a branch in the conditional logic
 def llm_judge(prompt, expected, trials, rubric, evaluation_mode = "NORMAL"):
 
     trial_text = ""
@@ -723,7 +739,7 @@ def llm_judge(prompt, expected, trials, rubric, evaluation_mode = "NORMAL"):
         """
 
     try:
-        response = judge_model.generate_content(judge_prompt)
+        response = judge_model.generate_content(judge_prompt) #judge model defined globally
     except Exception as e:
         return {
             "score": None,
@@ -731,7 +747,7 @@ def llm_judge(prompt, expected, trials, rubric, evaluation_mode = "NORMAL"):
         }
 
     try:
-        parsed = parse_llm_judge_response(response.text)
+        parsed = parse_llm_judge_response(response.text) #clean before returning
 
         print("\n--- RAW LLM RESPONSE ---")
         print(response.text)
@@ -755,12 +771,12 @@ def run_evaluation(
         use_llm_judge = False, 
         export_results = True,
         print_all_debug = True
-        ):
+        ): #configurable, eventually can be exposed to api endpoint / frontend 
     results = []
     rubric = load_rubric()
-    run_id = str(uuid4())
+    run_id = str(uuid4()) #unique identifier that identifies every individual question / run
 
-    for i, case in enumerate(dataset, start=1):
+    for i, case in enumerate(dataset, start=1): #outer loop represents all the prompt: expected answer pairs
         prompt = case["prompt"]
         expected = case["expected_value"]
         question_start = datetime.now()
@@ -768,7 +784,7 @@ def run_evaluation(
         trial_results = []
         responses = []
 
-        for t in range(num_trials):
+        for t in range(num_trials): #inner loop represents the same question re-run N_TRIALS # of times 
             runner, user_id, session_id = asyncio.run(
                 create_runner(use_agent_engine=USE_AGENT_ENGINE,
                               agent_engine_resource=config.AGENT_ENGINE_RESOURCE)
@@ -778,7 +794,7 @@ def run_evaluation(
                 safe_chat(runner, user_id, session_id, prompt)
             )
             
-            print_debug_details(results, print_all_debug)
+            print_log_details(results, print_all_debug)
             
             if response in ["TIMEOUT"] or response.startswith("ERROR"):
                 correct = False
@@ -836,7 +852,7 @@ def run_evaluation(
                     llm_override = True
                 
             trial_results.append(correct)
-            responses.append({
+            responses.append({ #RESPONSES -> evaluation_trial_level table in BigQuery
                 "run_id": run_id,
                 "question_id" : i,
                 "trial_id" : t + 1, 
@@ -886,7 +902,7 @@ def run_evaluation(
         question_end - question_start
         ).total_seconds()
         
-        results.append({
+        results.append({ #RESULTS -> corresponds to evaluation_question_level table in BigQuery
             "run_id": run_id,
             "question_id": i,
             "prompt": prompt,
@@ -921,8 +937,8 @@ def run_evaluation(
     return results, llm_runs, llm_passes
 
 
-
-def print_debug_details(results, print_all_debug = True):
+#extends the amount of detail that gets printed out in run_evaluation() loop
+def print_log_details(results, print_all_debug = True):
     print("\n--- DEBUG BREAKDOWN ---")
 
     for r in results:
@@ -953,11 +969,11 @@ def print_debug_details(results, print_all_debug = True):
                 print("Reasoning:", trial["llm_reasoning"])
 
 
-#runs the evaluation + guards against import runs
+#main() function equivalent, program entry point + guards against import runs
 if __name__ == "__main__":
 
     ensure_dataset_exists()
-    dataset = load_dataset("dataset.jsonl")
+    dataset = load_dataset("dataset.jsonl") #modify this if you migrate to cloud hosted dataset
     results, llm_runs, llm_passes = run_evaluation(
         dataset,
         num_trials=N_TRIALS,
@@ -969,7 +985,6 @@ if __name__ == "__main__":
     total_correct = sum(r["correct_count"] for r in results)    
     total_refusals = sum(r["refusal_count"] for r in results)
 
-    
     total_questions = len(results)
     total_trials = total_questions * N_TRIALS
 
@@ -979,6 +994,9 @@ if __name__ == "__main__":
     print("\n--- Configuration ---")
     print(f"LLM judge enabled: {USE_LLM_JUDGE}")
     print(f"Number of trials: {N_TRIALS}")
+    print(f"Results being exported: {EXPORT_RESULTS}")
+    print(f"Detailed results printed: {PRINT_ALL_DEBUG}")
+    print(f"Agent Engine (Cloud) Enabled: {USE_AGENT_ENGINE}")
 
     print("\n--- Summary ---")
     print(f"{total_correct} / {total_trials} correct (across all trials)")
