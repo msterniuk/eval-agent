@@ -1,3 +1,4 @@
+#IMPORTS 
 import json
 import asyncio
 import math
@@ -14,11 +15,14 @@ from google.cloud import bigquery
 import vertexai 
 from vertexai.generative_models import GenerativeModel
 
+#GLOBAL VARIABLES 
+#(more info can be found in .env and config.py)
 N_TRIALS = 1
 USE_LLM_JUDGE = True
 EXPORT_RESULTS = True
 PRINT_ALL_DEBUG = True
 USE_AGENT_ENGINE = True
+judge_model = GenerativeModel("gemini-2.5-flash")
 
 #import and set up llm as a judge model 
 vertexai.init(
@@ -26,49 +30,8 @@ vertexai.init(
     location = config.REGION
 )
 
-judge_model = GenerativeModel("gemini-2.5-flash")
 
-
-#helps normalize text to improve regex detection
-def normalize(text: str) -> str:
-    text = text.lower().strip()
-    text = re.sub(r"[^\w\s]", "", text)  # remove punctuation
-    return text
-
-def classify_expected(expected):
-
-    if expected is None:
-        return "NULL_VALUE"
-    
-    if isinstance(expected, str):
-        if expected.strip().lower() == "nan":
-            return "NAN_UNANSWERABLE"
-
-    if isinstance(expected, float) and math.isnan(expected):
-        return "NAN_UNANSWERABLE"
-
-    if isinstance(expected, (int, float)):
-        return "NUMERIC_SCALAR"
-
-    if isinstance(expected, str):
-
-        # JSON object
-        try:
-            parsed = json.loads(expected)
-
-            if isinstance(parsed, dict):
-                return "JSON_OBJECT"
-
-            if isinstance(parsed, list):
-                return "JSON_LIST"
-
-        except:
-            pass
-
-        return "STRING_OR_CODE"
-
-    return "STRING_OR_CODE"
-
+#GLOBAL VARIABLES / PATTERNS
 UNANSWERABLE_PATTERNS = [
     "cannot answer",
     "can't answer",
@@ -126,6 +89,47 @@ trial_level_grain_source_table = (
     "evaluation_trial_level"
 )
 
+#helps normalize text to improve regex detection
+def normalize(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r"[^\w\s]", "", text)
+    return text
+
+#identifies the TYPE / classification of input [used in debugging later]
+def classify_expected(expected):
+    if expected is None:
+        return "NULL_VALUE"
+    
+    if isinstance(expected, str):
+        if expected.strip().lower() == "nan":
+            return "NAN_UNANSWERABLE"
+
+    if isinstance(expected, float) and math.isnan(expected):
+        return "NAN_UNANSWERABLE"
+
+    if isinstance(expected, (int, float)):
+        return "NUMERIC_SCALAR"
+
+    if isinstance(expected, str):
+
+        # JSON object
+        try:
+            parsed = json.loads(expected)
+
+            if isinstance(parsed, dict):
+                return "JSON_OBJECT"
+
+            if isinstance(parsed, list):
+                return "JSON_LIST"
+
+        except:
+            pass
+
+        return "STRING_OR_CODE"
+
+    return "STRING_OR_CODE"
+
+#defines whether the response SHOULD BE refused or not; used for agent refusal assessment
 def is_valid_unanswerable_response(response: str) -> bool:
     response = response.lower()
 
@@ -154,13 +158,16 @@ def is_valid_unanswerable_response(response: str) -> bool:
         "not available in the available tables",
         "not available in the provided schema",
     ]
-
+    
+    #currently 'refusal' / unanswerable and 'clarification' phrases are split up
+    #this will allow for more detailed debugging / log info later on -> extending lists above, 
+    #adding regex, etc. will surely improve detection also
     return any(
         phrase in response
         for phrase in clarification_phrases
     )
 
-
+#checks whether any failure pattern is identified in response
 def contains_failure_message(response: str) -> bool:
     response = response.lower()
 
@@ -169,6 +176,8 @@ def contains_failure_message(response: str) -> bool:
         for pattern in FAILURE_PATTERNS
     )
 
+#THIS IS AGENT SPECIFIC -> will need to generalize this when you move to agents 
+#with different expected response formats. Consider adding this as an evaluation mode the LLM as a Judge
 def clean_response_for_extraction(response: str):
 
     response = re.sub( #removes the prompt version so the regex doesn't get confused
@@ -193,6 +202,7 @@ def clean_response_for_extraction(response: str):
 
     return response
 
+#likewise; see comment above "clean_response_for_extraction" function. agent dependent 
 def isolate_results_section(response):
 
     match = re.search(
@@ -206,6 +216,9 @@ def isolate_results_section(response):
 
     return response
 
+#DEPENDENCIES: clean_response_for_extraction() and isolate_results_section() are dependent 
+#on a specific (Golden Stays) agent response format. See comment above re: considering LLM as a judge 
+#to handle the subroutines of cleaning + isolating. Parent (extract_answer) uses regex to identify common answer patterns
 def extract_answer(response: str) -> str:
 
     response = clean_response_for_extraction(response)
@@ -236,9 +249,10 @@ def extract_answer(response: str) -> str:
 
     return None
 
-
+#core functionality behind determining "correctness" 
+#-> takes in agent response + expected answer, outputs {correctOrNot, whatWasExtracted, failureCategory}
 def is_correct(response: str, expected) -> tuple[bool, str, str]:
-    rubric = load_rubric()
+    rubric = load_rubric() #-> can rewrite to support loading from cloud. currently loads "rubric.txt" local project
     # convert JSON string to dict
     if isinstance(expected, str):
         try:
@@ -340,6 +354,7 @@ def is_correct(response: str, expected) -> tuple[bool, str, str]:
 
     return False, extracted, "VALUE_MISMATCH"
 
+#basic search on common LLM phrases to denote refusal. extend as needed
 def is_refusal(response):
     patterns = [
         r"\bi'm sorry\b",
@@ -355,6 +370,9 @@ def is_refusal(response):
 
     return any(re.search(p, response_lower) for p in patterns)
 
+#currently loads local rubric.txt file. If someone wishes, 
+#this is relatively simple to extend into loading from cloud hosted rubric.txt
+#this is self contained, so you only need to refactor load_rubric() 
 def load_rubric(path="rubric.txt"):
     with open(path, "r") as f:
         return f.read()
@@ -975,7 +993,3 @@ if __name__ == "__main__":
     if EXPORT_RESULTS:
         export_results_to_csv(results)
         export_results_to_bigquery(results)
-
-
-
-
