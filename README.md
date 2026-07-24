@@ -1,293 +1,591 @@
-# Financial Analyst Agent
-
-A production-ready BigQuery agent built with Google's Agent Development Kit (ADK) that analyzes accounting journal transactions and headers.
+# Evaluation Agent Documentation
 
 ## Overview
 
-This agent provides AI-powered financial analysis of your journal data stored in BigQuery:
-- **PS_JRNL_HEADER** — Journal entry headers with metadata (dates, batch IDs, status)
-- **PS_JRNL_LN** — Journal line items with account details, amounts, and descriptions
+### Purpose
 
-The agent uses natural language to understand your questions and generates optimized SQL queries to analyze the data.
+The Evaluation Agent is a framework designed to evaluate deployed AI agents using a structured dataset of prompts and expected outputs.
+
+The system:
+
+1. Loads a dataset from `dataset.jsonl`
+2. Sends prompts to a target agent
+3. Evaluates responses using deterministic rules and LLM-assisted scoring
+4. Generates CSV reports
+5. Writes evaluation results into BigQuery
+6. Produces detailed debugging output for analysis
+
+The framework is agent-agnostic and can evaluate any deployed Vertex AI Agent Engine Natural Language -> SQL agent by changing the configured `AGENT_ENGINE_RESOURCE`. It would also be reasonably straightforward to expand this to other types of agents by modifying the scoring logic and retaining the overall architecture. 
+
+***
+
+# Quick Start
 
 ## Prerequisites
 
-- **Python 3.11+**
-- **Google Cloud SDK** installed and configured (`gcloud` CLI)
-- **GCP Project**: `ca-sbox-es-science-444` with BigQuery access
-- **Service Account** or Application Default Credentials (ADC)
+### Environment Variables
 
-### GCP Permissions Required
+```env
+GCP_PROJECT_ID=
+GCP_REGION=
+STAGING_BUCKET=
 
-Your service account needs these IAM roles:
-- `roles/bigquery.dataViewer` — Read access to BigQuery datasets
-- `roles/bigquery.jobUser` — Run BigQuery queries
-- `roles/storage.objectAdmin` — Write to the staging bucket (for deployment)
-- `roles/aiplatform.user` — Deploy and run agents on Agent Engine
+# BigQuery — project/dataset where the DATA lives
+BQ_PROJECT_ID=
+BQ_DATASET=
 
-### Setup ADC (Application Default Credentials)
+##Agent Engine — Fill in after running deploy.py
+##AGENT_ENGINE_RESOURCE=
+
+
+# Model Configuration
+GEMINI_MODEL=
+GOOGLE_GENAI_USE_VERTEXAI=
+
+#Warnings are ignored during demo, comment out for testing
+PYTHONWARNINGS="ignore"
+```
+
+***
+
+### BigQuery Tables
+
+Evaluation results retained locally in evaluation_results.csv are also written into the two tables listed below. evaluation_question_level refers to individual line items in the dataset.jsonl file, while evaluation_trial_level refers to the results of repeated trials on the same question multiple times. 
+
+```text
+ca-sbox-es-aiml-demo-444.demo.evaluation_question_level
+ca-sbox-es-aiml-demo-444.demo.evaluation_trial_level
+```
+
+***
+
+### Run Evaluation
 
 ```bash
-gcloud auth application-default login
+python eval.py
 ```
 
-This allows local scripts to authenticate to GCP without explicit credentials.
+High-level execution:
 
-## Quick Start
-
-### 1. Install Dependencies
-
-```bash
-pip install -r requirements.txt
+```text
+eval.py
+    ↓
+run_evaluation()
+    ↓
+create_runner()
+    ↓
+safe_chat()
+    ↓
+chat()
+    ↓
+Agent under testing
+    ↓
+is_correct()
+    ↓
+export_results_to_csv()
+    ↓
+export_results_to_bigquery()
 ```
 
-### 2. Configure Environment
+***
 
-```bash
-cp .env.example .env
-# Edit .env with your values (or leave defaults as-is)
-cat .env
+# Architecture
+
+## High-Level Architecture
+
+```text
+dataset.jsonl
+        ↓
+
+run_evaluation()
+        ↓
+
+create_runner()
+        ↓
+
+safe_chat()
+        ↓
+      
+chat()
+        ↓
+
+Target Agent
+(local or deployed)
+        ↓
+
+Response
+        ↓
+
+is_correct()
+        ↓
+
+Deterministic Evaluation
+        ↓              ↘
+Pass                 LLM Judge
+                        ↓
+                 Optional Override
+                        ↓
+
+Question Results
+        ↓
+
+CSV Export
+        ↓
+
+BigQuery Export
 ```
 
-Default values are pre-filled for the `ca-sbox-es-science-444` project:
-- `GCP_PROJECT_ID=ca-sbox-es-science-444`
-- `BQ_DATASET=USL_POC`
-- `STAGING_BUCKET=gs://ca-sbox-es-science-444`
-- `GCP_REGION=us-central1`
+***
 
-### 3. Test Locally
+# Core Components
 
-Run the agent in local memory mode (no Agent Engine deployment required):
+***
 
-```bash
-python session_runner.py
-```
-
-You'll see an interactive prompt:
-
-```
-Initializing financial_analyst agent for local testing...
-✓ Agent ready.
-
-Example queries:
-  - 'Show me journal entries from the last 30 days'
-  - 'What accounts have the highest transaction volumes?'
-  - 'Summarize debit vs credit by account'
-
-Type 'exit' to quit.
-
-You: Show me the top 10 accounts by transaction count
-Agent: [generates SQL and returns results]
-```
-
-### Sample Queries
-
-Try these example questions:
-
-```
-- "Show me all journal entries for the last 30 days"
-- "What are the top accounts by debit amount?"
-- "List all transactions in batch ABC123"
-- "Find entries with amounts greater than $100,000"
-- "Summarize transactions by cost center"
-- "Compare total debits vs credits by account"
-```
-
-## Architecture
-
-### Local Testing
-```
-session_runner.py (InMemorySessionService)
-         ↓
-    agent.py (Root Agent)
-         ↓
-   BigQueryToolset
-         ↓
-    BigQuery API
-```
-
-### Cloud Deployment
-```
-Agent Engine (VertexAiSessionService)
-         ↓
-    agent.py (Root Agent)
-         ↓
-   BigQueryToolset
-         ↓
-    BigQuery API
-```
-
-## Deployment to Agent Engine
-
-### Step 1: Deploy the Agent
-
-```bash
-python deploy.py
-```
-
-This packages your agent and deploys it to Vertex AI Agent Engine. On success, you'll see:
-
-```
-✅ Deployment successful!
-
-Resource name:
-  projects/ca-sbox-es-science-444/locations/us-central1/reasoningEngines/12345...
-
-📝 Next step — add this to your .env file:
-  AGENT_ENGINE_RESOURCE=projects/ca-sbox-es-science-444/locations/us-central1/reasoningEngines/12345...
-```
-
-### Step 2: Update .env
-
-Copy the resource name and add it to `.env`:
-
-```bash
-AGENT_ENGINE_RESOURCE=projects/ca-sbox-es-science-444/locations/us-central1/reasoningEngines/12345...
-```
-
-### Step 3: Test Against Agent Engine
-
-```bash
-python session_runner.py
-```
-
-The script will detect `AGENT_ENGINE_RESOURCE` and use `VertexAiSessionService` automatically.
-
-## File Structure
-
-```
-financial_analyst/
-├── agent.py                 # Main ADK agent definition
-├── config.py               # Configuration (GCP, BigQuery, models)
-├── session_runner.py       # Interactive testing + Agent Engine runner
-├── deploy.py              # Deployment script to Agent Engine
-├── requirements.txt       # Python dependencies
-├── .env.example          # Environment variable template
-├── .adk/
-│   └── settings.json     # ADK Web UI configuration (local development)
-├── tools/
-│   ├── __init__.py
-│   └── bigquery_tool.py  # BigQuery toolset wrapper
-└── README.md             # This file
-```
-
-## Configuration
-
-All configuration is managed via environment variables in `.env`:
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `GCP_PROJECT_ID` | `ca-sbox-es-science-444` | GCP project ID |
-| `GCP_REGION` | `us-central1` | Region for Agent Engine |
-| `STAGING_BUCKET` | `gs://ca-sbox-es-science-444` | GCS bucket for deployment |
-| `BQ_DATASET` | `USL_POC` | BigQuery dataset name |
-| `GEMINI_MODEL` | `gemini-2.0-flash` | LLM model to use |
-| `AGENT_ENGINE_RESOURCE` | (empty) | Set after deployment |
-
-## Development
-
-### Local ADK Web UI (Advanced)
-
-For a graphical interface during local development:
-
-```bash
-# Install MCP server for BigQuery
-pip install mcp-server-bigquery uvx
-
-# Start ADK Web UI
-adk web
-```
-
-This opens a web interface on `http://localhost:8000` with visual query building.
-
-**Note**: The MCP server configuration is in `.adk/settings.json`.
-
-### Updating the Agent
-
-1. Modify `agent.py` (system prompt, tools, etc.)
-2. Test locally: `python session_runner.py`
-3. Redeploy: `python deploy.py`
-
-### Custom BigQuery Queries
-
-The agent automatically generates SQL based on your questions. To debug or manually test:
+## run\_evaluation()
 
 ```python
-from google.cloud import bigquery
-
-client = bigquery.Client(project="ca-sbox-es-science-444")
-query = """
-SELECT * FROM USL_POC.PS_JRNL_HEADER
-LIMIT 10
-"""
-results = client.query(query).result()
-for row in results:
-    print(row)
+def run_evaluation(
+    dataset,
+    num_trials=1,
+    use_llm_judge=False,
+    export_results=True,
+    print_all_debug=True
+)
 ```
 
-## Troubleshooting
+### Purpose
 
-### Issue: "AGENT_ENGINE_RESOURCE is not set"
+Main evaluation loop.
 
-**Solution**: You haven't deployed yet or haven't updated `.env` after deployment. Run:
-```bash
-python deploy.py
+Responsible for:
+
+* Creating sessions
+* Sending prompts
+* Evaluating correctness
+* Aggregating trial results
+* Exporting results
+
+### Inputs
+
+| Parameter         | Description                            |
+| ----------------- | -------------------------------------- |
+| dataset           | Dataset loaded from JSONL              |
+| num\_trials       | Number of attempts per prompt          |
+| use\_llm\_judge   | Enable Gemini LLM as a Judge evaluation|
+| export\_results   | Enable CSV/BigQuery export             |
+| print\_all\_debug | Show all debug output vs failures only |
+
+### Outputs
+
+```python
+results,
+llm_runs,
+llm_passes
 ```
 
-Then copy the resource name to `.env`.
+***
 
-### Issue: "Authentication failed" or "Permission denied"
+## create\_runner()
 
-**Solution**: Ensure ADC is set up:
-```bash
-gcloud auth application-default login
+```python
+async def create_runner(
+    use_agent_engine=False,
+    agent_engine_resource=None
+)
 ```
 
-And verify IAM roles are assigned to your service account.
+### Purpose
 
-### Issue: BigQuery queries timeout or fail
+Creates a session-backed runner for either:
 
-**Solution**: 
-- Check that `BQ_DATASET=USL_POC` is set in `.env`
-- Verify the tables `PS_JRNL_HEADER` and `PS_JRNL_LN` exist
-- Check dataset permissions
-
-### Issue: "Module not found" errors
-
-**Solution**: Reinstall dependencies:
-```bash
-pip install --upgrade -r requirements.txt
+```text
+Local Agent
 ```
 
-## Security Notes
+or
 
-1. **API Keys & Credentials**:
-   - Never commit `.env` to version control
-   - Use Google Cloud Secret Manager for production credentials
-   - Service accounts should have minimal necessary permissions
+```text
+Vertex Agent Engine
+```
 
-2. **BigQuery Access**:
-   - Agent can only read data (SELECT queries only)
-   - No INSERT, UPDATE, DELETE, or DROP permissions
+### Inputs
 
-3. **Agent Engine**:
-   - Deployments are private to your GCP project
-   - Sessions are authenticated via Vertex AI
+| Parameter               | Description                     |
+| ----------------------- | ------------------------------- |
+| use\_agent\_engine      | Enable deployed agent           |
+| agent\_engine\_resource | Full Agent Engine resource name |
 
-## Next Steps
+### Returns
 
-- **Customize the system prompt** in `agent.py` for domain-specific analysis
-- **Add more tables** by extending the `bigquery_tool.py` configuration
-- **Monitor deployments** via Cloud Logging and Vertex AI monitoring
-- **Integrate with applications** using the Agent Engine REST API
+```python
+runner,
+user_id,
+session_id
+```
 
-## Support
+***
 
-For issues or questions:
-1. Check the [ADK documentation](https://github.com/google/adk-python)
-2. Review [Vertex AI Agent Engine docs](https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/overview)
-3. Verify BigQuery dataset and table names
+## safe\_chat()
 
-## License
+```python
+async def safe_chat(
+    runner,
+    user_id,
+    session_id,
+    prompt
+)
+```
 
-This project uses Google Cloud APIs. See [Google Cloud Terms of Service](https://cloud.google.com/terms).
+### Purpose
+
+Wrapper around chat execution.
+
+Provides:
+
+* Timeout protection
+* Error handling
+* Standardized response format
+
+### Returns
+
+```python
+response_string
+```
+
+or
+
+```python
+TIMEOUT
+```
+
+or
+
+```python
+ERROR ...
+```
+
+***
+
+## is\_correct()
+
+```python
+def is_correct(
+    response,
+    expected
+)
+```
+
+### Purpose
+
+Determines whether a response is correct.
+
+### Evaluation Paths
+
+```text
+NUMERIC_SCALAR
+STRING_OR_CODE
+NAN_UNANSWERABLE
+JSON_LIST
+```
+
+### Returns
+
+```python
+(
+    correct,
+    extracted,
+    failure_category
+)
+```
+
+***
+
+### extracted
+
+Value extracted from the response.
+
+Examples:
+
+```text
+75.34
+Bruce
+557343
+```
+
+***
+
+### failure\_category
+
+Examples:
+
+```text
+VALUE_MISMATCH
+NO_EXTRACTION
+FAILURE_RESPONSE
+HALLUCINATED_ANSWER
+UNANSWERABLE
+JSON_LIST_MATCH
+JSON_LIST_MISMATCH
+```
+
+***
+
+## classify\_expected()
+
+```python
+def classify_expected(expected)
+```
+
+### Purpose
+
+Routes questions into evaluation strategies.
+
+### Possible Types
+
+```text
+NUMERIC_SCALAR
+STRING_OR_CODE
+JSON_LIST
+NAN_UNANSWERABLE
+NULL_VALUE
+```
+
+***
+
+## llm\_judge()
+
+### Purpose
+
+Gemini-based evaluation fallback.
+
+Used to augment deterministic evaluation, especially when regex cannot extract clear answer.
+
+### Evaluation Modes
+
+```text
+STANDARD
+UNANSWERABLE
+JSON_LIST
+```
+
+### Returns
+
+```python
+{
+    "score": 1,
+    "reasoning": "..."
+}
+```
+
+***
+
+# Result Structure
+
+## Question-Level Results
+
+Each question generates:
+
+```python
+{
+    "run_id": ...,
+    "question_id": ...,
+
+    "prompt": ...,
+    "expected": ...,
+
+    "correct_count": ...,
+    "accuracy": ...,
+
+    "expected_type": ...,
+
+    "failure_categories": ...,
+
+    "llm_score": ...,
+    "llm_reasoning": ...,
+    "llm_override": ...,
+
+    "question_start": ...,
+    "question_end": ...,
+    "duration_seconds": ...
+}
+```
+
+***
+
+## Trial-Level Results
+
+Stored under:
+
+```python
+result["trials"]
+```
+
+Example:
+
+```python
+{
+    "run_id": ...,
+    "question_id": ...,
+    "trial_id": ...,
+
+    "correct": ...,
+
+    "extracted": ...,
+    "failure_category": ...,
+
+    "response": ...,
+
+    "refused": ...,
+
+    "llm_score": ...,
+    "llm_reasoning": ...,
+    "llm_override": ...
+}
+```
+
+***
+
+# Debugging
+
+## print\_debug\_details()
+
+```python
+def print_debug_details(
+    results,
+    print_all_debug=True
+)
+```
+
+### Purpose
+
+Primary debugging utility.
+
+Prints:
+
+* Prompt
+* Expected value
+* Expected type
+* Trial outcomes
+* Extracted values
+* Failure categories
+* Full responses
+* LLM judge results
+* Override information
+
+### Modes
+
+```python
+print_all_debug=True
+```
+
+Print all questions.
+
+```python
+print_all_debug=False
+```
+
+Print failures only.
+
+***
+
+# BigQuery
+
+## Question Table
+
+```text
+evaluation_question_level
+```
+
+Stores:
+
+```text
+One row per question
+```
+
+Primary key concept:
+
+```text
+run_id
+question_id
+```
+
+***
+
+## Trial Table
+
+```text
+evaluation_trial_level
+```
+
+Stores:
+
+```text
+One row per trial
+```
+
+Primary key concept:
+
+```text
+run_id
+question_id
+trial_id
+```
+
+***
+
+# Evaluation Metadata
+
+## run\_id
+
+Generated:
+
+```python
+str(uuid4())
+```
+
+Purpose:
+
+```text
+Groups all questions from a single evaluation run.
+```
+
+***
+
+## question\_id
+
+Identifies a question within a run.
+
+***
+
+## trial\_id
+
+Identifies a trial within a question.
+
+***
+
+# Typical Workflow
+
+```text
+1. Upload Dataset
+        ↓
+2. Run Evaluation
+        ↓
+3. Agent Generates Responses
+        ↓
+4. Responses Evaluated
+        ↓
+5. CSV Generated
+        ↓
+6. BigQuery Updated
+        ↓
+7. Analyze Results
+```
+
+***
+
+### Multi-Agent Evaluation
+
+This evaluation framework is largely agent agnostic: simply alter the environment variables and all changes should populate downstream into agent.py, system prompt, config.py, etc. The key change is the AGENT_ENGINE_RESOURCE, but also ensure variables such as your BQ project or staging bucket have not changed in the .env file. 
+
+### Note on Agent 'Types' 
+One important thing to note is that this evaluation process is custom fit for Natural Language -> SQL agents. The overall architecture and skeleton can support any Vertex AI agent, but for best results you may wish to modify key evaluation functions such as is_correct() and llm_judge() to accomodate different agent types. 
