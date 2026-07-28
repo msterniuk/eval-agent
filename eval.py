@@ -800,18 +800,11 @@ def run_evaluation(
                 correct = False
                 result_detail = None
                 extracted = None
-                failure_category = "TIMEOUT"
-                refused = False
-
-            elif response.startswith("ERROR"):
-                correct = False
-                extracted = None
-                failure_category = "ERROR"
                 refused = False
 
             else: 
                 failure_category = None
-                correct, extracted_value, failure_category = is_correct(response, expected) 
+                correct, result_detail, failure_category = is_correct(response, expected) 
                 refused = is_refusal(response)
 
             status = "PASS" if correct else "FAIL"
@@ -826,7 +819,7 @@ def run_evaluation(
                 print("\n--- FAILURE DEBUG ---")
                 print(f"Q{i} Trial {t+1}")
                 print(f"Expected : {expected}")
-                print(f"Extracted: {extracted_value}")
+                print(f"Extracted: {result_detail}")
                 print(f"Response : {response[:1000]}")
                 print("---------------------\n")
 
@@ -839,6 +832,7 @@ def run_evaluation(
 
                 llm_score = llm_result["score"]
                 llm_reasoning = llm_result["reasoning"]
+                failure_category = result_detail 
 
                 print("\n--- TRIAL LLM RESULT ---")
                 print(llm_result)
@@ -857,7 +851,7 @@ def run_evaluation(
                 "question_id" : i,
                 "trial_id" : t + 1, 
                 "response": response,
-                "extracted": extracted_value,
+                "extracted": result_detail,
                 "failure_category": failure_category,
                 "correct": correct, 
                 "refused": refused, 
