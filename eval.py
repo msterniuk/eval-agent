@@ -403,7 +403,7 @@ def convert_excel_to_jsonl(input_path="input.xlsx", output_path="dataset.jsonl")
 #LEGACY: can be useful for debugging. default mode now exports to bigQuery tables
 def export_results_to_csv(results, output_file="evaluation_results.csv"):
     """
-    Export evaluation results to CSV.
+    Export evaluation results to CSV file.
 
     Args:
         results: list[dict]
