@@ -48,17 +48,6 @@ PYTHONWARNINGS="ignore"
 
 ***
 
-### BigQuery Tables
-
-Evaluation results retained locally in evaluation_results.csv are also written into the two tables listed below. evaluation_question_level refers to individual line items in the dataset.jsonl file, while evaluation_trial_level refers to the results of repeated trials on the same question multiple times. 
-
-```text
-ca-sbox-es-aiml-demo-444.demo.evaluation_question_level
-ca-sbox-es-aiml-demo-444.demo.evaluation_trial_level
-```
-
-***
-
 ### Run Evaluation
 
 ```bash
